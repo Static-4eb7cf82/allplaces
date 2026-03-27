@@ -46,7 +46,7 @@ export function MapPane({ places, initialBounds, onViewportChanged }: Props) {
         source: SOURCE_ID,
         filter: ["has", "point_count"],
         paint: {
-          "circle-color": "#0a9396",
+          "circle-color": "#546fa2",
           "circle-opacity": 0.82,
           "circle-radius": ["step", ["get", "point_count"], 14, 20, 20, 100, 28],
         },

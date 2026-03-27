@@ -8,19 +8,19 @@ export const theme = extendTheme({
   colorSchemes: {
     light: {
       palette: {
-        primary: {
-          solidBg: "#005f73",
-          solidHoverBg: "#0a9396",
-        },
+        // primary: {
+        //   solidBg: "#005f73",
+        //   solidHoverBg: "#0a9396",
+        // },
       },
     },
     dark: {
       palette: {
-        primary: {
-          solidBg: "#94d2bd",
-          solidColor: "#001219",
-          solidHoverBg: "#e9d8a6",
-        },
+        // primary: {
+        //   solidBg: "#94d2bd",
+        //   solidColor: "#001219",
+        //   solidHoverBg: "#e9d8a6",
+        // },
       },
     },
   },

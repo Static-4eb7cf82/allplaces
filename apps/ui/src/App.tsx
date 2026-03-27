@@ -179,6 +179,7 @@ function App() {
 
           <Box sx={{ flex: 1, minHeight: { xs: 420, md: "auto" }, position: "relative" }}>
             <Button
+              variant="soft"
               onClick={onLoadCurrentArea}
               loading={isLoadingArea}
               startDecorator={<SyncRounded />}
