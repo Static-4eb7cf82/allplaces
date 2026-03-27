@@ -40,6 +40,38 @@ function App() {
   const [isLoadingPlaces, setIsLoadingPlaces] = useState(false);
   const [status, setStatus] = useState<string>("Ready");
   const lastViewportKeyRef = useRef<string>("");
+  const [tableWidth, setTableWidth] = useState(420);
+  const [isDragging, setIsDragging] = useState(false);
+  const [ghostX, setGhostX] = useState<number | null>(null);
+  const dragStartRef = useRef<{ startX: number; startWidth: number } | null>(null);
+
+  const onDividerMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    dragStartRef.current = { startX: e.clientX, startWidth: tableWidth };
+    setIsDragging(true);
+    setGhostX(e.clientX);
+  }, [tableWidth]);
+
+  useEffect(() => {
+    if (!isDragging) return;
+    const onMouseMove = (e: MouseEvent) => setGhostX(e.clientX);
+    const onMouseUp = (e: MouseEvent) => {
+      if (dragStartRef.current) {
+        const delta = e.clientX - dragStartRef.current.startX;
+        const newWidth = Math.max(240, Math.min(Math.floor(window.innerWidth * 0.8), dragStartRef.current.startWidth + delta));
+        setTableWidth(newWidth);
+      }
+      setIsDragging(false);
+      setGhostX(null);
+      dragStartRef.current = null;
+    };
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [isDragging]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(filters.search.trim().toLowerCase()), 150);
@@ -114,13 +146,40 @@ function App() {
       <CssBaseline />
       <Sheet sx={{ height: "100vh", display: "flex", flexDirection: "column", background: "linear-gradient(120deg, rgba(10,147,150,0.15), rgba(238,155,0,0.1))" }}>
         <Box sx={{ display: "flex", flex: 1, minHeight: 0 }}>
+          {isDragging && ghostX !== null && (
+            <Box
+              sx={{
+                position: "fixed",
+                top: 0,
+                left: ghostX,
+                width: "4px",
+                height: "100vh",
+                backgroundColor: "primary.500",
+                opacity: 0.5,
+                zIndex: 9999,
+                pointerEvents: "none",
+              }}
+            />
+          )}
+          {isDragging && (
+            <Box
+              sx={{
+                position: "fixed",
+                inset: 0,
+                cursor: "col-resize",
+                zIndex: 9998,
+                userSelect: "none",
+              }}
+            />
+          )}
           <Sheet
             variant="outlined"
             sx={{
-              width: { xs: "100%", md: 420 },
-              maxWidth: { xs: "100%", md: 420 },
-              borderRight: { md: "1px solid" },
-              borderColor: "divider",
+              width: { xs: "100%", md: tableWidth },
+              minWidth: { md: tableWidth },
+              maxWidth: { xs: "100%", md: tableWidth },
+              flexShrink: 0,
+              borderRight: "none",
               p: 1.5,
               overflow: "auto",
             }}
@@ -176,6 +235,24 @@ function App() {
               </Table>
             </Stack>
           </Sheet>
+
+          <Box
+            onMouseDown={onDividerMouseDown}
+            sx={{
+              width: "6px",
+              flexShrink: 0,
+              cursor: "col-resize",
+              backgroundColor: isDragging ? "primary.softBg" : "transparent",
+              borderLeft: "1px solid",
+              borderColor: isDragging ? "primary.400" : "divider",
+              transition: "background-color 0.15s, border-color 0.15s",
+              "&:hover": {
+                backgroundColor: "primary.softBg",
+                borderColor: "primary.400",
+              },
+              zIndex: 10,
+            }}
+          />
 
           <Box sx={{ flex: 1, minHeight: { xs: 420, md: "auto" }, position: "relative" }}>
             <Button
