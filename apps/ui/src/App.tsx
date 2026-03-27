@@ -34,7 +34,7 @@ function App() {
   const { mode, setMode } = useColorScheme();
   const [bounds, setBounds] = useState<ViewportBounds>(DEFAULT_BOUNDS);
   const [places, setPlaces] = useState<Place[]>([]);
-  const [filters, setFilters] = useState<Filters>({ search: "", category: "", hasNameOnly: false });
+  const [filters, setFilters] = useState<Filters>({ search: "", category: "", hasNameOnly: true });
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isLoadingArea, setIsLoadingArea] = useState(false);
   const [isLoadingPlaces, setIsLoadingPlaces] = useState(false);
