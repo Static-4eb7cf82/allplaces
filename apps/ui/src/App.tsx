@@ -204,7 +204,7 @@ function App() {
                 <Option value="other">Other</Option>
               </Select>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Typography level="body-sm">Has name only</Typography>
+                <Typography level="body-sm">Has name</Typography>
                 <Switch checked={filters.hasName} onChange={(event) => setFilters((current) => ({ ...current, hasName: event.target.checked }))} />
               </Stack>
 
