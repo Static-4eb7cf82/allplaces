@@ -1,4 +1,4 @@
-module allplaces/backend
+module allplaces/api
 
 go 1.23
 

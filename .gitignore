@@ -1,8 +1,8 @@
 node_modules/
-apps/frontend/dist/
-apps/frontend/.vite/
-apps/frontend/*.tsbuildinfo
-apps/backend/bin/
+apps/ui/dist/
+apps/ui/.vite/
+apps/ui/*.tsbuildinfo
+apps/api/bin/
 *.log
 .env
 .DS_Store

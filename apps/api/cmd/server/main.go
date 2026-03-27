@@ -8,10 +8,10 @@ import (
 	"syscall"
 	"time"
 
-	"allplaces/backend/internal/api"
-	"allplaces/backend/internal/config"
-	"allplaces/backend/internal/db"
-	"allplaces/backend/internal/osm"
+	"allplaces/api/internal/api"
+	"allplaces/api/internal/config"
+	"allplaces/api/internal/db"
+	"allplaces/api/internal/osm"
 )
 
 func main() {
@@ -25,7 +25,7 @@ func main() {
 
 	repo := db.NewRepository(database)
 	overpassClient := osm.NewOverpassClient(cfg.OverpassURL, time.Duration(cfg.OverpassTimeoutSeconds)*time.Second)
-	handler := api.NewHandler(repo, overpassClient)
+	handler := api.NewHandler(repo, overpassClient, cfg.QueryPlacesLimit)
 	router := api.NewRouter(handler)
 
 	srv := &http.Server{
@@ -35,7 +35,7 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("backend listening on %s", srv.Addr)
+		log.Printf("api listening on %s", srv.Addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("server error: %v", err)
 		}

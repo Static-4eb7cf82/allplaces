@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"allplaces/backend/internal/db"
+	"allplaces/api/internal/db"
 )
 
 type OverpassClient struct {

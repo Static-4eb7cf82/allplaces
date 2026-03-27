@@ -7,15 +7,21 @@ import { Place, ViewportBounds } from "../types";
 type Props = {
   places: Place[];
   initialBounds: ViewportBounds;
+  selectedOsmId: string | null;
   onViewportChanged: (bounds: ViewportBounds) => void;
+  onCenterOnReady: (fn: (lat: number, lng: number) => void) => void;
 };
 
 const SOURCE_ID = "places-source";
 const BASE_MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 
-export function MapPane({ places, initialBounds, onViewportChanged }: Props) {
+export function MapPane({ places, initialBounds, selectedOsmId, onViewportChanged, onCenterOnReady }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
+  const onViewportChangedRef = useRef(onViewportChanged);
+  const onCenterOnReadyRef = useRef(onCenterOnReady);
+  onViewportChangedRef.current = onViewportChanged;
+  onCenterOnReadyRef.current = onCenterOnReady;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) {
@@ -46,7 +52,7 @@ export function MapPane({ places, initialBounds, onViewportChanged }: Props) {
         source: SOURCE_ID,
         filter: ["has", "point_count"],
         paint: {
-          "circle-color": "#0a9396",
+          "circle-color": "#546fa2",
           "circle-opacity": 0.82,
           "circle-radius": ["step", ["get", "point_count"], 14, 20, 20, 100, 28],
         },
@@ -80,6 +86,23 @@ export function MapPane({ places, initialBounds, onViewportChanged }: Props) {
         },
       });
 
+      map.addSource("selected-source", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+
+      map.addLayer({
+        id: "selected-point",
+        type: "circle",
+        source: "selected-source",
+        paint: {
+          "circle-color": "#0a9396",
+          "circle-radius": 9,
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "#ffffff",
+        },
+      });
+
       map.on("click", "clusters", (event) => {
         const features = map.queryRenderedFeatures(event.point, { layers: ["clusters"] });
         const clusterId = features[0]?.properties?.cluster_id;
@@ -100,7 +123,7 @@ export function MapPane({ places, initialBounds, onViewportChanged }: Props) {
 
       map.on("moveend", () => {
         const bounds = map.getBounds();
-        onViewportChanged({
+        onViewportChangedRef.current({
           south: bounds.getSouth(),
           west: bounds.getWest(),
           north: bounds.getNorth(),
@@ -109,7 +132,7 @@ export function MapPane({ places, initialBounds, onViewportChanged }: Props) {
       });
 
       const bounds = map.getBounds();
-      onViewportChanged({
+      onViewportChangedRef.current({
         south: bounds.getSouth(),
         west: bounds.getWest(),
         north: bounds.getNorth(),
@@ -119,11 +142,15 @@ export function MapPane({ places, initialBounds, onViewportChanged }: Props) {
 
     mapRef.current = map;
 
+    onCenterOnReadyRef.current((lat, lng) => {
+      mapRef.current?.easeTo({ center: [lng, lat], zoom: Math.max(mapRef.current.getZoom(), 15) });
+    });
+
     return () => {
       map.remove();
       mapRef.current = null;
     };
-  }, [initialBounds.east, initialBounds.north, initialBounds.south, initialBounds.west, onViewportChanged]);
+  }, [initialBounds.east, initialBounds.north, initialBounds.south, initialBounds.west]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -153,6 +180,38 @@ export function MapPane({ places, initialBounds, onViewportChanged }: Props) {
       })),
     });
   }, [places]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) {
+      return;
+    }
+
+    const source = map.getSource("selected-source") as GeoJSONSource | undefined;
+    if (!source) {
+      return;
+    }
+
+    if (!selectedOsmId) {
+      source.setData({ type: "FeatureCollection", features: [] });
+      return;
+    }
+
+    const place = places.find((p) => p.osm_id === selectedOsmId);
+    if (!place) {
+      source.setData({ type: "FeatureCollection", features: [] });
+      return;
+    }
+
+    source.setData({
+      type: "FeatureCollection",
+      features: [{
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [place.lng, place.lat] },
+        properties: { osm_id: place.osm_id },
+      }],
+    });
+  }, [selectedOsmId, places]);
 
   return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
 }

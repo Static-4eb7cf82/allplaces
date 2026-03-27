@@ -3,15 +3,15 @@ Find the place you're looking for. Explore every place in any area with powerful
 
 ## Phase 1 stack
 
-- Frontend: React + TypeScript + Joy UI + Material Icons + MapLibre GL, served by Nginx
-- Backend: Go + Gin REST API
+- UI: React + TypeScript + Joy UI + Material Icons + MapLibre GL, served by Nginx
+- API: Go + Gin REST API
 - Database: PostgreSQL
 - Runtime: Docker Compose
 
 ## Monorepo layout
 
-- apps/frontend
-- apps/backend
+- apps/ui
+- apps/api
 - apps/database
 - deploy/docker-compose
 
@@ -24,14 +24,14 @@ docker compose -f deploy/docker-compose/docker-compose.yml up --build
 ```
 
 2. Open:
-- Frontend: http://localhost:8080
-- Backend health: http://localhost:8081/health
+- UI: http://localhost:8080
+- API health: http://localhost:8081/health
 - Postgres: localhost:5432
 
 ## Phase 1 behavior
 
-- Top map button "Load current area" sends current viewport bbox to backend.
-- Backend queries Overpass for meaningful places and upserts into `osm_places`.
+- Top map button "Load current area" sends current viewport bbox to API.
+- API queries Overpass for meaningful places and upserts into `osm_places`.
 - Map always renders DB places for current viewport, with clustering.
 - Left flyout list shows the same viewport results.
 - Filters are instant and local: debounced name search, category, has-name-only.

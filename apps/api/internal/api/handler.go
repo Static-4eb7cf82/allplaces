@@ -9,14 +9,16 @@ import (
 	"strings"
 	"time"
 
-	"allplaces/backend/internal/db"
-	"allplaces/backend/internal/osm"
+	"allplaces/api/internal/db"
+	"allplaces/api/internal/osm"
+
 	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
 	repo           *db.Repository
 	overpassClient *osm.OverpassClient
+	queryLimit     int
 }
 
 type loadRequest struct {
@@ -26,8 +28,11 @@ type loadRequest struct {
 	East  float64 `json:"east" binding:"required"`
 }
 
-func NewHandler(repo *db.Repository, overpassClient *osm.OverpassClient) *Handler {
-	return &Handler{repo: repo, overpassClient: overpassClient}
+func NewHandler(repo *db.Repository, overpassClient *osm.OverpassClient, queryLimit int) *Handler {
+	if queryLimit <= 0 {
+		queryLimit = 30000
+	}
+	return &Handler{repo: repo, overpassClient: overpassClient, queryLimit: queryLimit}
 }
 
 func (h *Handler) Health(c *gin.Context) {
@@ -90,19 +95,19 @@ func (h *Handler) QueryPlaces(c *gin.Context) {
 		return
 	}
 
-	hasNameOnly := strings.EqualFold(strings.TrimSpace(c.Query("hasNameOnly")), "true")
+	hasName := strings.EqualFold(strings.TrimSpace(c.Query("hasName")), "true")
 	search := strings.TrimSpace(c.Query("search"))
 	category := strings.TrimSpace(c.Query("category"))
 
 	filters := db.QueryFilters{
-		South:       south,
-		West:        west,
-		North:       north,
-		East:        east,
-		Search:      search,
-		Category:    category,
-		HasNameOnly: hasNameOnly,
-		Limit:       10000,
+		South:    south,
+		West:     west,
+		North:    north,
+		East:     east,
+		Search:   search,
+		Category: category,
+		HasName:  hasName,
+		Limit:    h.queryLimit,
 	}
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
