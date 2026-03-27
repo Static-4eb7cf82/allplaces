@@ -54,7 +54,7 @@ function App() {
   const [selectedOsmId, setSelectedOsmId] = useState<string | null>(null);
   const centerOnRef = useRef<((lat: number, lng: number) => void) | null>(null);
   const lastViewportKeyRef = useRef<string>("");
-  const [tableWidth, setTableWidth] = useState(420);
+  const [tableWidth, setTableWidth] = useState(500);
   const [isDragging, setIsDragging] = useState(false);
   const [ghostX, setGhostX] = useState<number | null>(null);
   const dragStartRef = useRef<{ startX: number; startWidth: number } | null>(null);
