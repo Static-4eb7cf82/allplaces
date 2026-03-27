@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"allplaces/backend/internal/db"
-	"allplaces/backend/internal/osm"
+	"allplaces/api/internal/db"
+	"allplaces/api/internal/osm"
 	"github.com/gin-gonic/gin"
 )
 
