@@ -130,14 +130,9 @@ function App() {
             <Chip color="neutral" size="sm">Phase 1</Chip>
           </Stack>
 
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Button onClick={onLoadCurrentArea} loading={isLoadingArea} startDecorator={<SyncRounded />}>
-              Load current area
-            </Button>
-            <IconButton onClick={() => setMode(mode === "dark" ? "light" : "dark")}>
-              {mode === "dark" ? <LightModeRounded /> : <DarkModeRounded />}
-            </IconButton>
-          </Stack>
+          <IconButton onClick={() => setMode(mode === "dark" ? "light" : "dark")}>
+            {mode === "dark" ? <LightModeRounded /> : <DarkModeRounded />}
+          </IconButton>
         </Sheet>
 
         <Box sx={{ display: "flex", flex: 1, minHeight: 0 }}>
@@ -204,7 +199,24 @@ function App() {
             </Stack>
           </Sheet>
 
-          <Box sx={{ flex: 1, minHeight: { xs: 420, md: "auto" } }}>
+          <Box sx={{ flex: 1, minHeight: { xs: 420, md: "auto" }, position: "relative" }}>
+            <Button
+              onClick={onLoadCurrentArea}
+              loading={isLoadingArea}
+              startDecorator={<SyncRounded />}
+              sx={{
+                position: "absolute",
+                top: 12,
+                left: "50%",
+                transform: "translateX(-50%)",
+                zIndex: 2,
+                borderRadius: "999px",
+                boxShadow: "md",
+                px: 2,
+              }}
+            >
+              Load current area
+            </Button>
             <MapPane
               places={filteredPlaces}
               initialBounds={DEFAULT_BOUNDS}
