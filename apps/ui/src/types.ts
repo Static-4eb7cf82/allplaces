@@ -15,9 +15,3 @@ export type Place = {
   fetched_at?: string;
   category: string;
 };
-
-export type Filters = {
-  search: string;
-  category: string;
-  hasName: boolean;
-};

@@ -10,17 +10,19 @@ import {
   Select,
   Sheet,
   Stack,
-  Switch,
   Table,
   Typography,
 } from "@mui/joy";
 import { useColorScheme } from "@mui/joy/styles";
+import ArrowDownwardRounded from "@mui/icons-material/ArrowDownwardRounded";
+import ArrowUpwardRounded from "@mui/icons-material/ArrowUpwardRounded";
 import DarkModeRounded from "@mui/icons-material/DarkModeRounded";
 import LightModeRounded from "@mui/icons-material/LightModeRounded";
 import SyncRounded from "@mui/icons-material/SyncRounded";
+import UnfoldMoreRounded from "@mui/icons-material/UnfoldMoreRounded";
 
 import { fetchPlaces, loadCurrentArea } from "./api";
-import { Filters, Place, ViewportBounds } from "./types";
+import { Place, ViewportBounds } from "./types";
 import { MapPane } from "./components/MapPane";
 
 const DEFAULT_BOUNDS: ViewportBounds = {
@@ -34,8 +36,15 @@ function App() {
   const { mode, setMode } = useColorScheme();
   const [bounds, setBounds] = useState<ViewportBounds>(DEFAULT_BOUNDS);
   const [places, setPlaces] = useState<Place[]>([]);
-  const [filters, setFilters] = useState<Filters>({ search: "", category: "", hasName: true });
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [columnFilters, setColumnFilters] = useState({
+    name: "",
+    category: [] as string[],
+    subCategory: [] as string[],
+  });
+  const [sortState, setSortState] = useState<{ column: "name" | "category" | "subCategory" | null; direction: "asc" | "desc" }>({
+    column: null,
+    direction: "asc",
+  });
   const [isLoadingArea, setIsLoadingArea] = useState(false);
   const [isLoadingPlaces, setIsLoadingPlaces] = useState(false);
   const [status, setStatus] = useState<string>("Ready");
@@ -72,11 +81,6 @@ function App() {
       document.removeEventListener("mouseup", onMouseUp);
     };
   }, [isDragging]);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedSearch(filters.search.trim().toLowerCase()), 150);
-    return () => window.clearTimeout(timer);
-  }, [filters.search]);
 
   const refreshViewport = useCallback(async (nextBounds: ViewportBounds) => {
     const viewportKey = [nextBounds.south, nextBounds.west, nextBounds.north, nextBounds.east]
@@ -126,21 +130,6 @@ function App() {
     [refreshViewport]
   );
 
-  const filteredPlaces = useMemo(() => {
-    return places.filter((place) => {
-      if (filters.hasName && !place.name) {
-        return false;
-      }
-      if (filters.category && place.category !== filters.category) {
-        return false;
-      }
-      if (debouncedSearch && !(place.name || "").toLowerCase().includes(debouncedSearch)) {
-        return false;
-      }
-      return true;
-    });
-  }, [places, filters.category, filters.hasName, debouncedSearch]);
-
   const getSubCategoryValue = useCallback((place: Place): string => {
     const value = place.tags?.[place.category];
     if (value === undefined || value === null) {
@@ -166,6 +155,84 @@ function App() {
       return "None";
     }
   }, []);
+
+  const availableCategories = useMemo(() => {
+    const values = new Set(places.map((p) => p.category).filter(Boolean));
+    return Array.from(values).sort();
+  }, [places]);
+
+  const availableSubCategories = useMemo(() => {
+    const sourcePlaces = columnFilters.category.length > 0
+      ? places.filter((p) => columnFilters.category.includes(p.category))
+      : places;
+    const values = new Set(
+      sourcePlaces.map((p) => getSubCategoryValue(p)).filter((v) => v !== "None")
+    );
+    return Array.from(values).sort();
+  }, [places, columnFilters.category, getSubCategoryValue]);
+
+  const filteredPlaces = useMemo(() => {
+    return places.filter((place) => {
+      const nameValue = (place.name || "").toLowerCase();
+      if (columnFilters.name && !nameValue.includes(columnFilters.name.trim().toLowerCase())) {
+        return false;
+      }
+
+      if (columnFilters.category.length > 0 && !columnFilters.category.includes(place.category)) {
+        return false;
+      }
+
+      if (columnFilters.subCategory.length > 0 && !columnFilters.subCategory.includes(getSubCategoryValue(place))) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [places, columnFilters.name, columnFilters.category, columnFilters.subCategory, getSubCategoryValue]);
+
+  const sortedPlaces = useMemo(() => {
+    if (!sortState.column) {
+      return filteredPlaces;
+    }
+
+    const getSortValue = (place: Place): string => {
+      if (sortState.column === "name") {
+        return place.name || "";
+      }
+      if (sortState.column === "category") {
+        return place.category || "";
+      }
+      return getSubCategoryValue(place);
+    };
+
+    return [...filteredPlaces].sort((a, b) => {
+      const aValue = getSortValue(a);
+      const bValue = getSortValue(b);
+      const compareResult = aValue.localeCompare(bValue, undefined, { numeric: true, sensitivity: "base" });
+      return sortState.direction === "asc" ? compareResult : -compareResult;
+    });
+  }, [filteredPlaces, getSubCategoryValue, sortState.column, sortState.direction]);
+
+  const toggleSort = useCallback((column: "name" | "category" | "subCategory") => {
+    setSortState((current) => {
+      if (current.column !== column) {
+        return { column, direction: "asc" };
+      }
+      if (current.direction === "asc") {
+        return { column, direction: "desc" };
+      }
+      return { column: null, direction: "asc" };
+    });
+  }, []);
+
+  const getSortIcon = useCallback((column: "name" | "category" | "subCategory") => {
+    if (sortState.column !== column) {
+      return <UnfoldMoreRounded sx={{ fontSize: 14 }} />;
+    }
+    return sortState.direction === "asc"
+      ? <ArrowUpwardRounded sx={{ fontSize: 14 }} />
+      : <ArrowDownwardRounded sx={{ fontSize: 14 }} />;
+  }, [sortState.column, sortState.direction]);
 
   return (
     <>
@@ -211,28 +278,7 @@ function App() {
             }}
           >
             <Stack spacing={1.5}>
-              <Typography level="title-md">Filters</Typography>
-              <Input
-                value={filters.search}
-                onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))}
-                placeholder="Search name contains..."
-              />
-              <Select
-                value={filters.category || null}
-                placeholder="Category"
-                onChange={(_, value) => setFilters((current) => ({ ...current, category: value || "" }))}
-              >
-                <Option value="amenity">Amenity</Option>
-                <Option value="shop">Shop</Option>
-                <Option value="tourism">Tourism</Option>
-                <Option value="leisure">Leisure</Option>
-                <Option value="office">Office</Option>
-                <Option value="other">Other</Option>
-              </Select>
-              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Typography level="body-sm">Has name</Typography>
-                <Switch checked={filters.hasName} onChange={(event) => setFilters((current) => ({ ...current, hasName: event.target.checked }))} />
-              </Stack>
+              <Typography level="title-md">Places</Typography>
 
               <Typography level="body-sm" color="neutral">
                 {status}
@@ -244,13 +290,80 @@ function App() {
               <Table size="sm" stickyHeader sx={{ "--TableCell-headBackground": "var(--joy-palette-background-level2)" }}>
                 <thead>
                   <tr>
-                    <th>Name</th>
-                    <th>Category</th>
-                    <th>Sub Category</th>
+                    <th>
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Typography level="body-sm">Name</Typography>
+                        <IconButton size="sm" variant="plain" onClick={() => toggleSort("name")}>{getSortIcon("name")}</IconButton>
+                      </Stack>
+                    </th>
+                    <th>
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Typography level="body-sm">Category</Typography>
+                        <IconButton size="sm" variant="plain" onClick={() => toggleSort("category")}>{getSortIcon("category")}</IconButton>
+                      </Stack>
+                    </th>
+                    <th>
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Typography level="body-sm">Sub Category</Typography>
+                        <IconButton size="sm" variant="plain" onClick={() => toggleSort("subCategory")}>{getSortIcon("subCategory")}</IconButton>
+                      </Stack>
+                    </th>
+                  </tr>
+                  <tr>
+                    <th>
+                      <Input
+                        size="sm"
+                        value={columnFilters.name}
+                        placeholder="Filter name"
+                        onChange={(event) => setColumnFilters((current) => ({ ...current, name: event.target.value }))}
+                      />
+                    </th>
+                    <th>
+                      <Select
+                        size="sm"
+                        multiple
+                        value={columnFilters.category}
+                        placeholder="Filter category"
+                        onChange={(_, value) => setColumnFilters((current) => ({ ...current, category: value }))}
+                        renderValue={(selected) => (
+                          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                            {selected.map((item) => (
+                              <Chip key={item.value} size="sm">{item.label}</Chip>
+                            ))}
+                          </Box>
+                        )}
+                        sx={{ minWidth: 0 }}
+                      >
+                        {availableCategories.map((cat) => (
+                          <Option key={cat} value={cat}>{cat}</Option>
+                        ))}
+                      </Select>
+                    </th>
+                    <th>
+                      <Select
+                        size="sm"
+                        multiple
+                        value={columnFilters.subCategory}
+                        placeholder="Filter sub category"
+                        onChange={(_, value) => setColumnFilters((current) => ({ ...current, subCategory: value }))}
+                        renderValue={(selected) => (
+                          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                            {selected.map((item) => (
+                              <Chip key={item.value} size="sm">{item.label}</Chip>
+                            ))}
+                          </Box>
+                        )}
+                        sx={{ minWidth: 0 }}
+                      >
+                        {availableSubCategories.map((sub) => (
+                          <Option key={sub} value={sub}>{sub}</Option>
+                        ))}
+                      </Select>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredPlaces.slice(0, 500).map((place) => (
+                  {sortedPlaces.slice(0, 500).map((place) => (
                     <tr key={place.osm_id}>
                       <td>{place.name || "(unnamed)"}</td>
                       <td>{place.category}</td>
