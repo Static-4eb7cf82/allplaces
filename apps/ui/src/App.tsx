@@ -219,7 +219,6 @@ function App() {
                 <thead>
                   <tr>
                     <th>Name</th>
-                    <th>Type</th>
                     <th>Category</th>
                   </tr>
                 </thead>
@@ -227,7 +226,6 @@ function App() {
                   {filteredPlaces.slice(0, 500).map((place) => (
                     <tr key={place.osm_id}>
                       <td>{place.name || "(unnamed)"}</td>
-                      <td>{place.type}</td>
                       <td>{place.category}</td>
                     </tr>
                   ))}
