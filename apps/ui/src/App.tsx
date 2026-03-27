@@ -6,6 +6,7 @@ import {
   Button,
   Chip,
   CssBaseline,
+  Divider,
   IconButton,
   Input,
   Sheet,
@@ -103,7 +104,7 @@ function App() {
       setSelectedOsmId((current) =>
         current && viewportPlaces.some((p) => p.osm_id === current) ? current : null
       );
-      setStatus(`Showing ${viewportPlaces.length} places from database`);
+      setStatus(`${viewportPlaces.length} places loaded from database`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Failed to fetch places");
     } finally {
@@ -303,7 +304,7 @@ function App() {
                 <Switch checked={hasName} onChange={(event) => setHasName(event.target.checked)} />
               </Stack>
 
-              <Table size="sm" stickyHeader sx={{ "--TableCell-headBackground": "var(--joy-palette-background-level2)" }}>
+              <Table size="sm" stickyHeader>
                 <thead>
                   <tr>
                     <th>
