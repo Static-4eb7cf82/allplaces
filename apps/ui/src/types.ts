@@ -19,5 +19,5 @@ export type Place = {
 export type Filters = {
   search: string;
   category: string;
-  hasNameOnly: boolean;
+  hasName: boolean;
 };

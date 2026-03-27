@@ -95,19 +95,19 @@ func (h *Handler) QueryPlaces(c *gin.Context) {
 		return
 	}
 
-	hasNameOnly := strings.EqualFold(strings.TrimSpace(c.Query("hasNameOnly")), "true")
+	hasName := strings.EqualFold(strings.TrimSpace(c.Query("hasName")), "true")
 	search := strings.TrimSpace(c.Query("search"))
 	category := strings.TrimSpace(c.Query("category"))
 
 	filters := db.QueryFilters{
-		South:       south,
-		West:        west,
-		North:       north,
-		East:        east,
-		Search:      search,
-		Category:    category,
-		HasNameOnly: hasNameOnly,
-		Limit:       h.queryLimit,
+		South:    south,
+		West:     west,
+		North:    north,
+		East:     east,
+		Search:   search,
+		Category: category,
+		HasName:  hasName,
+		Limit:    h.queryLimit,
 	}
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)

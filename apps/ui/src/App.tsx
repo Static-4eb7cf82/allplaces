@@ -34,7 +34,7 @@ function App() {
   const { mode, setMode } = useColorScheme();
   const [bounds, setBounds] = useState<ViewportBounds>(DEFAULT_BOUNDS);
   const [places, setPlaces] = useState<Place[]>([]);
-  const [filters, setFilters] = useState<Filters>({ search: "", category: "", hasNameOnly: true });
+  const [filters, setFilters] = useState<Filters>({ search: "", category: "", hasName: true });
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isLoadingArea, setIsLoadingArea] = useState(false);
   const [isLoadingPlaces, setIsLoadingPlaces] = useState(false);
@@ -96,7 +96,7 @@ function App() {
 
   const filteredPlaces = useMemo(() => {
     return places.filter((place) => {
-      if (filters.hasNameOnly && !place.name) {
+      if (filters.hasName && !place.name) {
         return false;
       }
       if (filters.category && place.category !== filters.category) {
@@ -107,7 +107,7 @@ function App() {
       }
       return true;
     });
-  }, [places, filters.category, filters.hasNameOnly, debouncedSearch]);
+  }, [places, filters.category, filters.hasName, debouncedSearch]);
 
   return (
     <>
@@ -146,7 +146,7 @@ function App() {
               </Select>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
                 <Typography level="body-sm">Has name only</Typography>
-                <Switch checked={filters.hasNameOnly} onChange={(event) => setFilters((current) => ({ ...current, hasNameOnly: event.target.checked }))} />
+                <Switch checked={filters.hasName} onChange={(event) => setFilters((current) => ({ ...current, hasName: event.target.checked }))} />
               </Stack>
 
               <Typography level="body-sm" color="neutral">

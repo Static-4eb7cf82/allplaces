@@ -22,14 +22,14 @@ type Place struct {
 }
 
 type QueryFilters struct {
-	South       float64
-	West        float64
-	North       float64
-	East        float64
-	Search      string
-	Category    string
-	HasNameOnly bool
-	Limit       int
+	South    float64
+	West     float64
+	North    float64
+	East     float64
+	Search   string
+	Category string
+	HasName  bool
+	Limit    int
 }
 
 type Repository struct {
@@ -116,7 +116,7 @@ func (r *Repository) QueryPlaces(ctx context.Context, filters QueryFilters) ([]P
 			END = $%d`, len(args)))
 	}
 
-	if filters.HasNameOnly {
+	if filters.HasName {
 		whereParts = append(whereParts, "COALESCE(TRIM(name), '') <> ''")
 	}
 
