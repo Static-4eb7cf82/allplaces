@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Autocomplete,
+  AutocompleteOption,
   Box,
   Button,
   Chip,
   CssBaseline,
   IconButton,
   Input,
-  Option,
-  Select,
   Sheet,
   Stack,
   Table,
@@ -319,46 +319,46 @@ function App() {
                       />
                     </th>
                     <th>
-                      <Select
+                      <Autocomplete
                         size="sm"
                         multiple
+                        options={availableCategories}
                         value={columnFilters.category}
-                        placeholder="Filter category"
+                        placeholder={columnFilters.category.length === 0 ? "Filter category" : undefined}
                         onChange={(_, value) => setColumnFilters((current) => ({ ...current, category: value }))}
-                        renderValue={(selected) => (
-                          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                            {selected.map((item) => (
-                              <Chip key={item.value} size="sm">{item.label}</Chip>
-                            ))}
-                          </Box>
+                        renderOption={(props, option) => (
+                          <AutocompleteOption {...props} key={option}>
+                            {option}
+                          </AutocompleteOption>
                         )}
+                        renderTags={(selected, getTagProps) =>
+                          selected.map((option, index) => (
+                            <Chip size="sm" {...getTagProps({ index })} key={option}>{option}</Chip>
+                          ))
+                        }
                         sx={{ minWidth: 0 }}
-                      >
-                        {availableCategories.map((cat) => (
-                          <Option key={cat} value={cat}>{cat}</Option>
-                        ))}
-                      </Select>
+                      />
                     </th>
                     <th>
-                      <Select
+                      <Autocomplete
                         size="sm"
                         multiple
+                        options={availableSubCategories}
                         value={columnFilters.subCategory}
-                        placeholder="Filter sub category"
+                        placeholder={columnFilters.subCategory.length === 0 ? "Filter sub category" : undefined}
                         onChange={(_, value) => setColumnFilters((current) => ({ ...current, subCategory: value }))}
-                        renderValue={(selected) => (
-                          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                            {selected.map((item) => (
-                              <Chip key={item.value} size="sm">{item.label}</Chip>
-                            ))}
-                          </Box>
+                        renderOption={(props, option) => (
+                          <AutocompleteOption {...props} key={option}>
+                            {option}
+                          </AutocompleteOption>
                         )}
+                        renderTags={(selected, getTagProps) =>
+                          selected.map((option, index) => (
+                            <Chip size="sm" {...getTagProps({ index })} key={option}>{option}</Chip>
+                          ))
+                        }
                         sx={{ minWidth: 0 }}
-                      >
-                        {availableSubCategories.map((sub) => (
-                          <Option key={sub} value={sub}>{sub}</Option>
-                        ))}
-                      </Select>
+                      />
                     </th>
                   </tr>
                 </thead>
