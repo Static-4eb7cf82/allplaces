@@ -10,6 +10,7 @@ import {
   Input,
   Sheet,
   Stack,
+  Switch,
   Table,
   Typography,
 } from "@mui/joy";
@@ -41,6 +42,7 @@ function App() {
     category: [] as string[],
     subCategory: [] as string[],
   });
+  const [hasName, setHasName] = useState(true);
   const [sortState, setSortState] = useState<{ column: "name" | "category" | "subCategory" | null; direction: "asc" | "desc" }>({
     column: null,
     direction: "asc",
@@ -173,6 +175,10 @@ function App() {
 
   const filteredPlaces = useMemo(() => {
     return places.filter((place) => {
+      if (hasName && !place.name) {
+        return false;
+      }
+
       const nameValue = (place.name || "").toLowerCase();
       if (columnFilters.name && !nameValue.includes(columnFilters.name.trim().toLowerCase())) {
         return false;
@@ -188,7 +194,7 @@ function App() {
 
       return true;
     });
-  }, [places, columnFilters.name, columnFilters.category, columnFilters.subCategory, getSubCategoryValue]);
+  }, [places, hasName, columnFilters.name, columnFilters.category, columnFilters.subCategory, getSubCategoryValue]);
 
   const sortedPlaces = useMemo(() => {
     if (!sortState.column) {
@@ -286,6 +292,11 @@ function App() {
               <Typography level="body-sm" color="neutral">
                 {isLoadingPlaces ? "Refreshing viewport places..." : `${filteredPlaces.length} visible places`}
               </Typography>
+
+              <Stack direction="row" alignItems="center" justifyContent="space-between">
+                <Typography level="body-sm">Has name</Typography>
+                <Switch checked={hasName} onChange={(event) => setHasName(event.target.checked)} />
+              </Stack>
 
               <Table size="sm" stickyHeader sx={{ "--TableCell-headBackground": "var(--joy-palette-background-level2)" }}>
                 <thead>
