@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
   Button,
@@ -39,13 +39,23 @@ function App() {
   const [isLoadingArea, setIsLoadingArea] = useState(false);
   const [isLoadingPlaces, setIsLoadingPlaces] = useState(false);
   const [status, setStatus] = useState<string>("Ready");
+  const lastViewportKeyRef = useRef<string>("");
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(filters.search.trim().toLowerCase()), 150);
     return () => window.clearTimeout(timer);
   }, [filters.search]);
 
-  const refreshViewport = async (nextBounds: ViewportBounds) => {
+  const refreshViewport = useCallback(async (nextBounds: ViewportBounds) => {
+    const viewportKey = [nextBounds.south, nextBounds.west, nextBounds.north, nextBounds.east]
+      .map((value) => value.toFixed(5))
+      .join(":");
+
+    if (viewportKey === lastViewportKeyRef.current) {
+      return;
+    }
+
+    lastViewportKeyRef.current = viewportKey;
     setIsLoadingPlaces(true);
     try {
       const viewportPlaces = await fetchPlaces(nextBounds);
@@ -56,11 +66,11 @@ function App() {
     } finally {
       setIsLoadingPlaces(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     refreshViewport(bounds);
-  }, []);
+  }, [bounds, refreshViewport]);
 
   const onLoadCurrentArea = async () => {
     setIsLoadingArea(true);
@@ -75,6 +85,14 @@ function App() {
       setIsLoadingArea(false);
     }
   };
+
+  const handleViewportChanged = useCallback(
+    (nextBounds: ViewportBounds) => {
+      setBounds(nextBounds);
+      refreshViewport(nextBounds);
+    },
+    [refreshViewport]
+  );
 
   const filteredPlaces = useMemo(() => {
     return places.filter((place) => {
@@ -190,10 +208,7 @@ function App() {
             <MapPane
               places={filteredPlaces}
               initialBounds={DEFAULT_BOUNDS}
-              onViewportChanged={(nextBounds) => {
-                setBounds(nextBounds);
-                refreshViewport(nextBounds);
-              }}
+              onViewportChanged={handleViewportChanged}
             />
           </Box>
         </Box>
