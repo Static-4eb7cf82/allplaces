@@ -50,6 +50,8 @@ function App() {
   const [isLoadingArea, setIsLoadingArea] = useState(false);
   const [isLoadingPlaces, setIsLoadingPlaces] = useState(false);
   const [status, setStatus] = useState<string>("Ready");
+  const [selectedOsmId, setSelectedOsmId] = useState<string | null>(null);
+  const centerOnRef = useRef<((lat: number, lng: number) => void) | null>(null);
   const lastViewportKeyRef = useRef<string>("");
   const [tableWidth, setTableWidth] = useState(420);
   const [isDragging, setIsDragging] = useState(false);
@@ -98,6 +100,7 @@ function App() {
     try {
       const viewportPlaces = await fetchPlaces(nextBounds);
       setPlaces(viewportPlaces);
+      setSelectedOsmId(null);
       setStatus(`Showing ${viewportPlaces.length} places from database`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Failed to fetch places");
@@ -375,7 +378,17 @@ function App() {
                 </thead>
                 <tbody>
                   {sortedPlaces.slice(0, 500).map((place) => (
-                    <tr key={place.osm_id}>
+                    <tr
+                      key={place.osm_id}
+                      onClick={() => {
+                        setSelectedOsmId(place.osm_id);
+                        centerOnRef.current?.(place.lat, place.lng);
+                      }}
+                      style={{
+                        cursor: "pointer",
+                        backgroundColor: selectedOsmId === place.osm_id ? "var(--joy-palette-primary-softBg)" : undefined,
+                      }}
+                    >
                       <td>{place.name || "(unnamed)"}</td>
                       <td>{place.category}</td>
                       <td>{getSubCategoryValue(place)}</td>
@@ -446,7 +459,9 @@ function App() {
             <MapPane
               places={filteredPlaces}
               initialBounds={DEFAULT_BOUNDS}
+              selectedOsmId={selectedOsmId}
               onViewportChanged={handleViewportChanged}
+              onCenterOnReady={(fn) => { centerOnRef.current = fn; }}
             />
           </Box>
         </Box>
