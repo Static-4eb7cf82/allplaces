@@ -141,6 +141,32 @@ function App() {
     });
   }, [places, filters.category, filters.hasName, debouncedSearch]);
 
+  const getSubCategoryValue = useCallback((place: Place): string => {
+    const value = place.tags?.[place.category];
+    if (value === undefined || value === null) {
+      return "None";
+    }
+
+    if (typeof value === "string") {
+      const trimmedValue = value.trim();
+      return trimmedValue || "None";
+    }
+
+    if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+      return String(value);
+    }
+
+    try {
+      const serializedValue = JSON.stringify(value);
+      if (!serializedValue || serializedValue === "{}" || serializedValue === "[]") {
+        return "None";
+      }
+      return serializedValue;
+    } catch {
+      return "None";
+    }
+  }, []);
+
   return (
     <>
       <CssBaseline />
@@ -220,6 +246,7 @@ function App() {
                   <tr>
                     <th>Name</th>
                     <th>Category</th>
+                    <th>Sub Category</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -227,6 +254,7 @@ function App() {
                     <tr key={place.osm_id}>
                       <td>{place.name || "(unnamed)"}</td>
                       <td>{place.category}</td>
+                      <td>{getSubCategoryValue(place)}</td>
                     </tr>
                   ))}
                 </tbody>
