@@ -11,6 +11,7 @@ type Props = {
 };
 
 const SOURCE_ID = "places-source";
+const BASE_MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 
 export function MapPane({ places, initialBounds, onViewportChanged }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -23,7 +24,7 @@ export function MapPane({ places, initialBounds, onViewportChanged }: Props) {
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: "https://demotiles.maplibre.org/style.json",
+      style: BASE_MAP_STYLE_URL,
       center: [(initialBounds.west + initialBounds.east) / 2, (initialBounds.south + initialBounds.north) / 2],
       zoom: 12,
     });
