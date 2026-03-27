@@ -1,7 +1,7 @@
 node_modules/
-apps/frontend/dist/
-apps/frontend/.vite/
-apps/frontend/*.tsbuildinfo
+apps/ui/dist/
+apps/ui/.vite/
+apps/ui/*.tsbuildinfo
 apps/backend/bin/
 *.log
 .env

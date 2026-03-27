@@ -34,13 +34,13 @@ services:
       db:
         condition: service_healthy
 
-  frontend:
+  ui:
     build:
-      context: ../../apps/frontend
+      context: ../../apps/ui
       dockerfile: Dockerfile
       args:
         VITE_API_BASE_URL: http://localhost:8081
-    container_name: allplaces-frontend
+    container_name: allplaces-ui
     restart: unless-stopped
     ports:
       - "8080:80"
