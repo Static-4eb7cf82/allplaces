@@ -100,7 +100,9 @@ function App() {
     try {
       const viewportPlaces = await fetchPlaces(nextBounds);
       setPlaces(viewportPlaces);
-      setSelectedOsmId(null);
+      setSelectedOsmId((current) =>
+        current && viewportPlaces.some((p) => p.osm_id === current) ? current : null
+      );
       setStatus(`Showing ${viewportPlaces.length} places from database`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Failed to fetch places");
