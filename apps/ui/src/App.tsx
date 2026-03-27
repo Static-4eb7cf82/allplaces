@@ -113,25 +113,6 @@ function App() {
     <>
       <CssBaseline />
       <Sheet sx={{ height: "100vh", display: "flex", flexDirection: "column", background: "linear-gradient(120deg, rgba(10,147,150,0.15), rgba(238,155,0,0.1))" }}>
-        <Sheet
-          variant="soft"
-          sx={{
-            p: 1.5,
-            borderBottom: "1px solid",
-            borderColor: "divider",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 1,
-          }}
-        >
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Typography level="h4">allplaces</Typography>
-            <Chip color="neutral" size="sm">Phase 1</Chip>
-          </Stack>
-
-        </Sheet>
-
         <Box sx={{ display: "flex", flex: 1, minHeight: 0 }}>
           <Sheet
             variant="outlined"
