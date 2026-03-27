@@ -11,12 +11,14 @@ import (
 
 	"allplaces/api/internal/db"
 	"allplaces/api/internal/osm"
+
 	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
 	repo           *db.Repository
 	overpassClient *osm.OverpassClient
+	queryLimit     int
 }
 
 type loadRequest struct {
@@ -26,8 +28,11 @@ type loadRequest struct {
 	East  float64 `json:"east" binding:"required"`
 }
 
-func NewHandler(repo *db.Repository, overpassClient *osm.OverpassClient) *Handler {
-	return &Handler{repo: repo, overpassClient: overpassClient}
+func NewHandler(repo *db.Repository, overpassClient *osm.OverpassClient, queryLimit int) *Handler {
+	if queryLimit <= 0 {
+		queryLimit = 30000
+	}
+	return &Handler{repo: repo, overpassClient: overpassClient, queryLimit: queryLimit}
 }
 
 func (h *Handler) Health(c *gin.Context) {
@@ -102,7 +107,7 @@ func (h *Handler) QueryPlaces(c *gin.Context) {
 		Search:      search,
 		Category:    category,
 		HasNameOnly: hasNameOnly,
-		Limit:       10000,
+		Limit:       h.queryLimit,
 	}
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)

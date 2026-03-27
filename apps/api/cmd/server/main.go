@@ -25,7 +25,7 @@ func main() {
 
 	repo := db.NewRepository(database)
 	overpassClient := osm.NewOverpassClient(cfg.OverpassURL, time.Duration(cfg.OverpassTimeoutSeconds)*time.Second)
-	handler := api.NewHandler(repo, overpassClient)
+	handler := api.NewHandler(repo, overpassClient, cfg.QueryPlacesLimit)
 	router := api.NewRouter(handler)
 
 	srv := &http.Server{

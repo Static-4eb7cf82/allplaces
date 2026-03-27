@@ -88,8 +88,8 @@ func (r *Repository) UpsertPlaces(ctx context.Context, places []Place) (int64, e
 
 func (r *Repository) QueryPlaces(ctx context.Context, filters QueryFilters) ([]Place, error) {
 	limit := filters.Limit
-	if limit <= 0 || limit > 20000 {
-		limit = 10000
+	if limit <= 0 {
+		limit = 30000
 	}
 
 	args := []interface{}{filters.South, filters.North, filters.West, filters.East}
