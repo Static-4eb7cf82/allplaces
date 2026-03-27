@@ -130,9 +130,6 @@ function App() {
             <Chip color="neutral" size="sm">Phase 1</Chip>
           </Stack>
 
-          <IconButton onClick={() => setMode(mode === "dark" ? "light" : "dark")}>
-            {mode === "dark" ? <LightModeRounded /> : <DarkModeRounded />}
-          </IconButton>
         </Sheet>
 
         <Box sx={{ display: "flex", flex: 1, minHeight: 0 }}>
@@ -217,6 +214,26 @@ function App() {
             >
               Load current area
             </Button>
+            <IconButton
+              size="sm"
+              onClick={() => setMode(mode === "dark" ? "light" : "dark")}
+              sx={{
+                backgroundColor: "#ffffff",
+                position: "absolute",
+                bottom: 40,
+                right: 10,
+                zIndex: 2,
+                width: 24,
+                height: 24,
+                minWidth: 0,
+                minHeight: 0,
+                borderRadius: "4px",
+                boxShadow: "sm",
+                "--IconButton-size": "24px",
+              }}
+            >
+              {mode === "dark" ? <LightModeRounded sx={{ fontSize: 14 }} /> : <DarkModeRounded sx={{ fontSize: 14 }} />}
+            </IconButton>
             <MapPane
               places={filteredPlaces}
               initialBounds={DEFAULT_BOUNDS}
