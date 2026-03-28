@@ -1,4 +1,6 @@
 import { useEffect, useRef } from "react";
+import Box from "@mui/joy/Box";
+import { useColorScheme } from "@mui/joy/styles";
 import maplibregl, { GeoJSONSource, Map } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -42,6 +44,7 @@ export function MapPane({
   onViewportChanged,
   onCenterOnReady,
 }: Props) {
+  const { mode } = useColorScheme();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const onViewportChangedRef = useRef(onViewportChanged);
@@ -338,5 +341,46 @@ export function MapPane({
     });
   }, [selectedOsmId, places]);
 
-  return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
+  return (
+    <Box
+      ref={containerRef}
+      sx={{
+        width: "100%",
+        height: "100%",
+        ".maplibregl-ctrl-top-right": {
+          top: 10,
+          right: 10,
+        },
+        ".maplibregl-ctrl-group": {
+          border: "none",
+          borderRadius: "sm",
+          boxShadow: "sm",
+          overflow: "hidden",
+          backgroundColor: "var(--joy-palette-neutral-softBg)",
+        },
+        ".maplibregl-ctrl-group button": {
+          width: 32,
+          height: 32,
+          color: "var(--joy-palette-text-primary)",
+          backgroundColor: "transparent",
+        },
+        ".maplibregl-ctrl-group button + button": {
+          borderTop: "1px solid var(--joy-palette-divider)",
+        },
+        ".maplibregl-ctrl-group button:hover": {
+          backgroundColor: "var(--joy-palette-neutral-softHoverBg)",
+        },
+        ".maplibregl-ctrl-group button:active": {
+          backgroundColor: "var(--joy-palette-neutral-softActiveBg)",
+        },
+        ".maplibregl-ctrl-group button:focus-visible": {
+          outline: "2px solid var(--joy-palette-primary-500)",
+          outlineOffset: -2,
+        },
+        ".maplibregl-ctrl-icon": {
+          filter: mode === "dark" ? "brightness(0) invert(1)" : "none",
+        },
+      }}
+    />
+  );
 }
