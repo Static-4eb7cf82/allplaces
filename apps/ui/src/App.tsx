@@ -23,11 +23,13 @@ import {
 import { useColorScheme } from "@mui/joy/styles";
 import ArrowDownwardRounded from "@mui/icons-material/ArrowDownwardRounded";
 import ArrowUpwardRounded from "@mui/icons-material/ArrowUpwardRounded";
+import CloseRounded from "@mui/icons-material/CloseRounded";
+import DataObjectRounded from "@mui/icons-material/DataObjectRounded";
 import DarkModeRounded from "@mui/icons-material/DarkModeRounded";
 import LightModeRounded from "@mui/icons-material/LightModeRounded";
 import MapRounded from "@mui/icons-material/MapRounded";
 import SyncRounded from "@mui/icons-material/SyncRounded";
-import SearchRounded from "@mui/icons-material/SearchRounded"
+import SearchRounded from "@mui/icons-material/SearchRounded";
 import UnfoldMoreRounded from "@mui/icons-material/UnfoldMoreRounded";
 
 import { fetchPlaces, loadCurrentArea } from "./api";
@@ -92,6 +94,8 @@ function App() {
   const [ghostX, setGhostX] = useState<number | null>(null);
   const dragStartRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const [baseMapOption, setBaseMapOption] = useState<BaseMapOption>("bright");
+  const [hoveredOsmId, setHoveredOsmId] = useState<string | null>(null);
+  const [debugPlace, setDebugPlace] = useState<Place | null>(null);
 
   const onDividerMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -480,6 +484,8 @@ function App() {
                   {sortedPlaces.slice(0, 500).map((place) => (
                     <tr
                       key={place.osm_id}
+                      onMouseEnter={() => setHoveredOsmId(place.osm_id)}
+                      onMouseLeave={() => setHoveredOsmId((current) => (current === place.osm_id ? null : current))}
                       onClick={() => {
                         setSelectedOsmId(place.osm_id);
                         centerOnRef.current?.(place.lat, place.lng);
@@ -491,7 +497,31 @@ function App() {
                     >
                       <td style={{ width: '40%', fontWeight: 'bold' }}>{place.name || "(unnamed)"}</td>
                       <td style={{ width: '30%' }}>{place.category}</td>
-                      <td style={{ width: '30%' }}>{getSubCategoryValue(place)}</td>
+                      <td style={{ width: '30%', position: 'relative', paddingRight: '38px' }}>
+                        {getSubCategoryValue(place)}
+                        {hoveredOsmId === place.osm_id && (
+                          <Tooltip title="Show raw JSON" placement="left" variant="soft">
+                            <IconButton
+                              size="sm"
+                              variant="soft"
+                              color="neutral"
+                              sx={{
+                                position: 'absolute',
+                                right: 6,
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                '--IconButton-size': '26px',
+                              }}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setDebugPlace(place);
+                              }}
+                            >
+                              <DataObjectRounded sx={{ fontSize: 18 }} />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -599,6 +629,49 @@ function App() {
             />
           </Box>
         </Box>
+
+        {debugPlace && (
+          <Sheet
+            variant="outlined"
+            sx={{
+              position: "fixed",
+              right: 16,
+              bottom: 16,
+              zIndex: 2000,
+              width: { xs: "calc(100vw - 32px)", sm: 460 },
+              maxHeight: "70vh",
+              p: 1.5,
+              borderRadius: "md",
+              boxShadow: "lg",
+              overflow: "hidden",
+            }}
+          >
+            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+              <Typography level="title-sm">Raw place JSON</Typography>
+              <IconButton size="sm" variant="plain" onClick={() => setDebugPlace(null)}>
+                <CloseRounded sx={{ fontSize: 16 }} />
+              </IconButton>
+            </Stack>
+            <Divider sx={{ my: 1 }} />
+            <Box
+              component="pre"
+              sx={{
+                m: 0,
+                p: 1,
+                borderRadius: "sm",
+                backgroundColor: "background.level1",
+                overflow: "auto",
+                maxHeight: "calc(70vh - 72px)",
+                fontSize: 12,
+                lineHeight: 1.4,
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+              }}
+            >
+              {JSON.stringify(debugPlace, null, 2)}
+            </Box>
+          </Sheet>
+        )}
       </Sheet>
     </>
   );
