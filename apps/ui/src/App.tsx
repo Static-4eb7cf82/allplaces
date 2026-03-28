@@ -7,25 +7,59 @@ import {
   Chip,
   CssBaseline,
   Divider,
+  Dropdown,
   IconButton,
   Input,
+  Menu,
+  MenuButton,
+  MenuItem,
   Sheet,
   Stack,
   Switch,
   Table,
+  Tooltip,
   Typography,
 } from "@mui/joy";
 import { useColorScheme } from "@mui/joy/styles";
 import ArrowDownwardRounded from "@mui/icons-material/ArrowDownwardRounded";
 import ArrowUpwardRounded from "@mui/icons-material/ArrowUpwardRounded";
+import CloseRounded from "@mui/icons-material/CloseRounded";
+import DataObjectRounded from "@mui/icons-material/DataObjectRounded";
 import DarkModeRounded from "@mui/icons-material/DarkModeRounded";
 import LightModeRounded from "@mui/icons-material/LightModeRounded";
+import MapRounded from "@mui/icons-material/MapRounded";
 import SyncRounded from "@mui/icons-material/SyncRounded";
+import SearchRounded from "@mui/icons-material/SearchRounded";
 import UnfoldMoreRounded from "@mui/icons-material/UnfoldMoreRounded";
 
 import { fetchPlaces, loadCurrentArea } from "./api";
 import { Place, ViewportBounds } from "./types";
 import { MapPane } from "./components/MapPane";
+
+type BaseMapOption = "positron" | "bright" | "liberty" | "liberty-3d";
+
+const BASE_MAP_STYLES: Record<BaseMapOption, { label: string; styleUrl: string; enable3D: boolean }> = {
+  positron: {
+    label: "Positron",
+    styleUrl: "https://tiles.openfreemap.org/styles/positron",
+    enable3D: false,
+  },
+  bright: {
+    label: "Bright",
+    styleUrl: "https://tiles.openfreemap.org/styles/bright",
+    enable3D: false,
+  },
+  liberty: {
+    label: "Liberty",
+    styleUrl: "https://tiles.openfreemap.org/styles/liberty",
+    enable3D: false,
+  },
+  "liberty-3d": {
+    label: "Liberty (3D)",
+    styleUrl: "https://tiles.openfreemap.org/styles/liberty",
+    enable3D: true,
+  },
+};
 
 const DEFAULT_BOUNDS: ViewportBounds = {
   south: 40.699,
@@ -42,6 +76,7 @@ function App() {
     name: "",
     category: [] as string[],
     subCategory: [] as string[],
+    fuzzySearch: "",
   });
   const [hasName, setHasName] = useState(true);
   const [sortState, setSortState] = useState<{ column: "name" | "category" | "subCategory" | null; direction: "asc" | "desc" }>({
@@ -54,10 +89,13 @@ function App() {
   const [selectedOsmId, setSelectedOsmId] = useState<string | null>(null);
   const centerOnRef = useRef<((lat: number, lng: number) => void) | null>(null);
   const lastViewportKeyRef = useRef<string>("");
-  const [tableWidth, setTableWidth] = useState(500);
+  const [tableWidth, setTableWidth] = useState(Math.floor(window.innerWidth * 0.35));
   const [isDragging, setIsDragging] = useState(false);
   const [ghostX, setGhostX] = useState<number | null>(null);
   const dragStartRef = useRef<{ startX: number; startWidth: number } | null>(null);
+  const [baseMapOption, setBaseMapOption] = useState<BaseMapOption>("bright");
+  const [hoveredOsmId, setHoveredOsmId] = useState<string | null>(null);
+  const [debugPlace, setDebugPlace] = useState<Place | null>(null);
 
   const onDividerMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -179,6 +217,51 @@ function App() {
     return Array.from(values).sort();
   }, [places, columnFilters.category, getSubCategoryValue]);
 
+  const fuzzyMatch = useCallback((text: string, query: string): boolean => {
+    const textLower = text.toLowerCase();
+    const queryLower = query.toLowerCase();
+    let textIdx = 0;
+    for (let i = 0; i < queryLower.length; i++) {
+      const char = queryLower[i];
+      textIdx = textLower.indexOf(char, textIdx);
+      if (textIdx === -1) {
+        return false;
+      }
+      textIdx++;
+    }
+    return true;
+  }, []);
+
+  const getPlaceMetadataFields = useCallback((place: Place): string[] => {
+    const fields: string[] = [];
+    
+    if (place.name) {
+      fields.push(place.name);
+    }
+    
+    if (place.category) {
+      fields.push(place.category);
+    }
+    
+    if (place.tags) {
+      Object.values(place.tags).forEach((value) => {
+        if (typeof value === "string") {
+          fields.push(value);
+        } else if (typeof value === "number" || typeof value === "boolean") {
+          fields.push(String(value));
+        } else if (value !== null && value !== undefined) {
+          try {
+            fields.push(JSON.stringify(value));
+          } catch {
+            // skip unparseable values
+          }
+        }
+      });
+    }
+    
+    return fields;
+  }, []);
+
   const filteredPlaces = useMemo(() => {
     return places.filter((place) => {
       if (hasName && !place.name) {
@@ -198,9 +281,20 @@ function App() {
         return false;
       }
 
+      if (columnFilters.fuzzySearch) {
+        const searchTerms = columnFilters.fuzzySearch.trim().split(/\s+/).filter(term => term.length > 0);
+        const fields = getPlaceMetadataFields(place);
+        const matches = searchTerms.some((term) => 
+          fields.some((field) => fuzzyMatch(field, term))
+        );
+        if (!matches) {
+          return false;
+        }
+      }
+
       return true;
     });
-  }, [places, hasName, columnFilters.name, columnFilters.category, columnFilters.subCategory, getSubCategoryValue]);
+  }, [places, hasName, columnFilters.name, columnFilters.category, columnFilters.subCategory, columnFilters.fuzzySearch, getSubCategoryValue, getPlaceMetadataFields, fuzzyMatch]);
 
   const sortedPlaces = useMemo(() => {
     if (!sortState.column) {
@@ -249,6 +343,7 @@ function App() {
   return (
     <>
       <CssBaseline />
+      {/* Sheet that appears behind table, shows the drag edge  */}
       <Sheet sx={{ height: "100vh", display: "flex", flexDirection: "column", background: "linear-gradient(120deg, rgba(10,147,150,0.15), rgba(238,155,0,0.1))" }}>
         <Box sx={{ display: "flex", flex: 1, minHeight: 0 }}>
           {isDragging && ghostX !== null && (
@@ -278,13 +373,11 @@ function App() {
             />
           )}
           <Sheet
-            variant="outlined"
             sx={{
               width: { xs: "100%", md: tableWidth },
               minWidth: { md: tableWidth },
               maxWidth: { xs: "100%", md: tableWidth },
               flexShrink: 0,
-              borderRight: "none",
               p: 1.5,
               overflow: "auto",
             }}
@@ -304,30 +397,38 @@ function App() {
                 <Switch checked={hasName} onChange={(event) => setHasName(event.target.checked)} />
               </Stack>
 
+              <Input
+                startDecorator={<SearchRounded />}
+                size="sm"
+                placeholder="Fuzzy search"
+                value={columnFilters.fuzzySearch}
+                onChange={(event) => setColumnFilters((current) => ({ ...current, fuzzySearch: event.target.value }))}
+              />
+
               <Table size="sm" stickyHeader>
                 <thead>
                   <tr>
-                    <th>
+                    <th style={{ width: '40%' }}>
                       <Stack direction="row" spacing={0.5} alignItems="center">
                         <Typography level="body-sm">Name</Typography>
-                        <IconButton size="sm" variant="plain" onClick={() => toggleSort("name")}>{getSortIcon("name")}</IconButton>
+                        <IconButton size="sm" onClick={() => toggleSort("name")}>{getSortIcon("name")}</IconButton>
                       </Stack>
                     </th>
-                    <th>
+                    <th style={{ width: '30%' }}>
                       <Stack direction="row" spacing={0.5} alignItems="center">
                         <Typography level="body-sm">Category</Typography>
-                        <IconButton size="sm" variant="plain" onClick={() => toggleSort("category")}>{getSortIcon("category")}</IconButton>
+                        <IconButton size="sm" onClick={() => toggleSort("category")}>{getSortIcon("category")}</IconButton>
                       </Stack>
                     </th>
-                    <th>
+                    <th style={{ width: '30%' }}>
                       <Stack direction="row" spacing={0.5} alignItems="center">
                         <Typography level="body-sm">Sub Category</Typography>
-                        <IconButton size="sm" variant="plain" onClick={() => toggleSort("subCategory")}>{getSortIcon("subCategory")}</IconButton>
+                        <IconButton size="sm" onClick={() => toggleSort("subCategory")}>{getSortIcon("subCategory")}</IconButton>
                       </Stack>
                     </th>
                   </tr>
                   <tr>
-                    <th>
+                    <th style={{ width: '40%' }}>
                       <Input
                         size="sm"
                         value={columnFilters.name}
@@ -335,7 +436,7 @@ function App() {
                         onChange={(event) => setColumnFilters((current) => ({ ...current, name: event.target.value }))}
                       />
                     </th>
-                    <th>
+                    <th style={{ width: '30%' }}>
                       <Autocomplete
                         size="sm"
                         multiple
@@ -356,7 +457,7 @@ function App() {
                         sx={{ minWidth: 0 }}
                       />
                     </th>
-                    <th>
+                    <th style={{ width: '30%' }}>
                       <Autocomplete
                         size="sm"
                         multiple
@@ -383,6 +484,8 @@ function App() {
                   {sortedPlaces.slice(0, 500).map((place) => (
                     <tr
                       key={place.osm_id}
+                      onMouseEnter={() => setHoveredOsmId(place.osm_id)}
+                      onMouseLeave={() => setHoveredOsmId((current) => (current === place.osm_id ? null : current))}
                       onClick={() => {
                         setSelectedOsmId(place.osm_id);
                         centerOnRef.current?.(place.lat, place.lng);
@@ -392,9 +495,33 @@ function App() {
                         backgroundColor: selectedOsmId === place.osm_id ? "var(--joy-palette-primary-softBg)" : undefined,
                       }}
                     >
-                      <td>{place.name || "(unnamed)"}</td>
-                      <td>{place.category}</td>
-                      <td>{getSubCategoryValue(place)}</td>
+                      <td style={{ width: '40%', fontWeight: 'bold' }}>{place.name || "(unnamed)"}</td>
+                      <td style={{ width: '30%' }}>{place.category}</td>
+                      <td style={{ width: '30%', position: 'relative', paddingRight: '38px' }}>
+                        {getSubCategoryValue(place)}
+                        {hoveredOsmId === place.osm_id && (
+                          <Tooltip title="Show raw JSON" placement="left" variant="soft">
+                            <IconButton
+                              size="sm"
+                              variant="soft"
+                              color="neutral"
+                              sx={{
+                                position: 'absolute',
+                                right: 6,
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                '--IconButton-size': '26px',
+                              }}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setDebugPlace(place);
+                              }}
+                            >
+                              <DataObjectRounded sx={{ fontSize: 18 }} />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -423,6 +550,7 @@ function App() {
           <Box sx={{ flex: 1, minHeight: { xs: 420, md: "auto" }, position: "relative" }}>
             <Button
               variant="soft"
+              size="sm"
               onClick={onLoadCurrentArea}
               loading={isLoadingArea}
               startDecorator={<SyncRounded />}
@@ -433,41 +561,117 @@ function App() {
                 transform: "translateX(-50%)",
                 zIndex: 2,
                 borderRadius: "999px",
-                boxShadow: "md",
-                px: 2,
+                // borderRadius: "12px",
+                boxShadow: "sm",
+                px: 3,
               }}
             >
               Load current area
             </Button>
-            <IconButton
-              size="sm"
-              onClick={() => setMode(mode === "dark" ? "light" : "dark")}
-              sx={{
-                backgroundColor: "#ffffff",
-                position: "absolute",
-                bottom: 40,
-                right: 10,
-                zIndex: 2,
-                width: 24,
-                height: 24,
-                minWidth: 0,
-                minHeight: 0,
-                borderRadius: "4px",
-                boxShadow: "sm",
-                "--IconButton-size": "24px",
-              }}
-            >
-              {mode === "dark" ? <LightModeRounded sx={{ fontSize: 14 }} /> : <DarkModeRounded sx={{ fontSize: 14 }} />}
-            </IconButton>
+            <Dropdown>
+              <Tooltip title="Select base map" placement="left" variant="soft">
+                <MenuButton
+                  slots={{ root: IconButton }}
+                  slotProps={{
+                    root: {
+                      size: "sm",
+                      variant: "soft",
+                      sx: {
+                        position: "absolute",
+                        top: 124,
+                        right: 20,
+                        zIndex: 2,
+                        boxShadow: "sm",
+                      },
+                    },
+                  }}
+                >
+                  <MapRounded sx={{ fontSize: 18 }} />
+                </MenuButton>
+              </Tooltip>
+              <Menu placement="bottom-end" sx={{ minWidth: 176 }}>
+                {(Object.entries(BASE_MAP_STYLES) as [BaseMapOption, { label: string; styleUrl: string; enable3D: boolean }][]).map(([key, style]) => (
+                  <MenuItem
+                    key={key}
+                    selected={baseMapOption === key}
+                    onClick={() => setBaseMapOption(key)}
+                  >
+                    {style.label}
+                  </MenuItem>
+                ))}
+              </Menu>
+            </Dropdown>
+            <Tooltip title="Toggle light/dark mode" placement="left" variant="soft">
+              <IconButton
+                size="sm"
+                variant="soft"
+                onClick={() => setMode(mode === "dark" ? "light" : "dark")}
+                sx={{
+                  position: "absolute",
+                  top: 164,
+                  right: 20,
+                  zIndex: 2,
+                  boxShadow: "sm",
+                }}
+              >
+                {mode === "dark" ? <LightModeRounded sx={{ fontSize: 18 }} /> : <DarkModeRounded sx={{ fontSize: 18 }} />}
+              </IconButton>
+            </Tooltip>
+
             <MapPane
               places={filteredPlaces}
               initialBounds={DEFAULT_BOUNDS}
               selectedOsmId={selectedOsmId}
+              mapStyleUrl={BASE_MAP_STYLES[baseMapOption].styleUrl}
+              enable3D={BASE_MAP_STYLES[baseMapOption].enable3D}
               onViewportChanged={handleViewportChanged}
               onCenterOnReady={(fn) => { centerOnRef.current = fn; }}
             />
           </Box>
         </Box>
+
+        {debugPlace && (
+          <Sheet
+            variant="outlined"
+            sx={{
+              position: "fixed",
+              right: 16,
+              bottom: 16,
+              zIndex: 2000,
+              width: { xs: "calc(100vw - 32px)", sm: 460 },
+              maxHeight: "70vh",
+              p: 1.5,
+              borderRadius: "md",
+              boxShadow: "lg",
+              overflow: "hidden",
+            }}
+          >
+            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+              <Typography level="title-sm">Raw place JSON</Typography>
+              <IconButton size="sm" variant="plain" onClick={() => setDebugPlace(null)}>
+                <CloseRounded sx={{ fontSize: 16 }} />
+              </IconButton>
+            </Stack>
+            <Divider sx={{ my: 1 }} />
+            <Box
+              component="pre"
+              sx={{
+                m: 0,
+                p: 1,
+                borderRadius: "sm",
+                backgroundColor: "background.level1",
+                overflow: "auto",
+                maxHeight: "calc(70vh - 72px)",
+                fontSize: 12,
+                lineHeight: 1.4,
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+              }}
+            >
+              {JSON.stringify(debugPlace, null, 2)}
+            </Box>
+          </Sheet>
+        )}
       </Sheet>
     </>
   );
