@@ -510,19 +510,13 @@ function App() {
               sx={{
                 backgroundColor: "#ffffff",
                 position: "absolute",
-                bottom: 40,
+                top: 150,
                 right: 10,
                 zIndex: 2,
-                width: 24,
-                height: 24,
-                minWidth: 0,
-                minHeight: 0,
-                borderRadius: "4px",
                 boxShadow: "sm",
-                "--IconButton-size": "24px",
               }}
             >
-              {mode === "dark" ? <LightModeRounded sx={{ fontSize: 14 }} /> : <DarkModeRounded sx={{ fontSize: 14 }} />}
+              {mode === "dark" ? <LightModeRounded sx={{ fontSize: 18 }} /> : <DarkModeRounded sx={{ fontSize: 18 }} />}
             </IconButton>
             <MapPane
               places={filteredPlaces}
