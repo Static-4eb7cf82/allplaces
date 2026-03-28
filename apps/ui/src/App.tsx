@@ -27,6 +27,7 @@ import DarkModeRounded from "@mui/icons-material/DarkModeRounded";
 import LightModeRounded from "@mui/icons-material/LightModeRounded";
 import MapRounded from "@mui/icons-material/MapRounded";
 import SyncRounded from "@mui/icons-material/SyncRounded";
+import SearchRounded from "@mui/icons-material/SearchRounded"
 import UnfoldMoreRounded from "@mui/icons-material/UnfoldMoreRounded";
 
 import { fetchPlaces, loadCurrentArea } from "./api";
@@ -73,6 +74,7 @@ function App() {
     name: "",
     category: [] as string[],
     subCategory: [] as string[],
+    fuzzySearch: "",
   });
   const [hasName, setHasName] = useState(true);
   const [sortState, setSortState] = useState<{ column: "name" | "category" | "subCategory" | null; direction: "asc" | "desc" }>({
@@ -211,6 +213,51 @@ function App() {
     return Array.from(values).sort();
   }, [places, columnFilters.category, getSubCategoryValue]);
 
+  const fuzzyMatch = useCallback((text: string, query: string): boolean => {
+    const textLower = text.toLowerCase();
+    const queryLower = query.toLowerCase();
+    let textIdx = 0;
+    for (let i = 0; i < queryLower.length; i++) {
+      const char = queryLower[i];
+      textIdx = textLower.indexOf(char, textIdx);
+      if (textIdx === -1) {
+        return false;
+      }
+      textIdx++;
+    }
+    return true;
+  }, []);
+
+  const getPlaceMetadataFields = useCallback((place: Place): string[] => {
+    const fields: string[] = [];
+    
+    if (place.name) {
+      fields.push(place.name);
+    }
+    
+    if (place.category) {
+      fields.push(place.category);
+    }
+    
+    if (place.tags) {
+      Object.values(place.tags).forEach((value) => {
+        if (typeof value === "string") {
+          fields.push(value);
+        } else if (typeof value === "number" || typeof value === "boolean") {
+          fields.push(String(value));
+        } else if (value !== null && value !== undefined) {
+          try {
+            fields.push(JSON.stringify(value));
+          } catch {
+            // skip unparseable values
+          }
+        }
+      });
+    }
+    
+    return fields;
+  }, []);
+
   const filteredPlaces = useMemo(() => {
     return places.filter((place) => {
       if (hasName && !place.name) {
@@ -230,9 +277,20 @@ function App() {
         return false;
       }
 
+      if (columnFilters.fuzzySearch) {
+        const searchTerms = columnFilters.fuzzySearch.trim().split(/\s+/).filter(term => term.length > 0);
+        const fields = getPlaceMetadataFields(place);
+        const matches = searchTerms.some((term) => 
+          fields.some((field) => fuzzyMatch(field, term))
+        );
+        if (!matches) {
+          return false;
+        }
+      }
+
       return true;
     });
-  }, [places, hasName, columnFilters.name, columnFilters.category, columnFilters.subCategory, getSubCategoryValue]);
+  }, [places, hasName, columnFilters.name, columnFilters.category, columnFilters.subCategory, columnFilters.fuzzySearch, getSubCategoryValue, getPlaceMetadataFields, fuzzyMatch]);
 
   const sortedPlaces = useMemo(() => {
     if (!sortState.column) {
@@ -334,6 +392,14 @@ function App() {
                 <Typography level="body-sm">Has name</Typography>
                 <Switch checked={hasName} onChange={(event) => setHasName(event.target.checked)} />
               </Stack>
+
+              <Input
+                startDecorator={<SearchRounded />}
+                size="sm"
+                placeholder="Fuzzy search"
+                value={columnFilters.fuzzySearch}
+                onChange={(event) => setColumnFilters((current) => ({ ...current, fuzzySearch: event.target.value }))}
+              />
 
               <Table size="sm" stickyHeader>
                 <thead>
