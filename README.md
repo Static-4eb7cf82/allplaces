@@ -1,14 +1,17 @@
-# allplaces
+# All Places
+
 Find the place you're looking for. Explore every place in any area with powerful filters and sorting, beyond the limits of traditional map apps.
 
-## Phase 1 stack
+<img src="assets/wAfxYr4snK.png" width="1280" />
+
+## Tech stack
 
 - UI: React + TypeScript + Joy UI + Material Icons + MapLibre GL, served by Nginx
 - API: Go + Gin REST API
 - Database: PostgreSQL
 - Runtime: Docker Compose
 
-## Monorepo layout
+## Repo layout
 
 - apps/ui
 - apps/api
@@ -28,7 +31,7 @@ docker compose -f deploy/docker-compose/docker-compose.yml up --build
 - API health: http://localhost:8081/health
 - Postgres: localhost:5432
 
-## Phase 1 behavior
+## Core app behavior
 
 - Top map button "Load current area" sends current viewport bbox to API.
 - API queries Overpass for meaningful places and upserts into `osm_places`.
@@ -58,19 +61,3 @@ Examples:
 - Query `food park` returns places matching `food` OR `park`.
 - Query `food` does not match `park`.
 - Query `abc` matches `aXbYYc`, but does not match `acb`.
-
-## Database table
-
-`apps/database/init/001_init.sql` creates:
-
-```sql
-CREATE TABLE osm_places (
-	osm_id TEXT PRIMARY KEY,
-	type TEXT NOT NULL,
-	name TEXT,
-	lat DOUBLE PRECISION NOT NULL,
-	lng DOUBLE PRECISION NOT NULL,
-	tags JSONB NOT NULL,
-	fetched_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
-```
