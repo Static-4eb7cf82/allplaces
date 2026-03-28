@@ -339,19 +339,19 @@ function App() {
               <Table size="sm" stickyHeader>
                 <thead>
                   <tr>
-                    <th>
+                    <th style={{ width: '40%' }}>
                       <Stack direction="row" spacing={0.5} alignItems="center">
                         <Typography level="body-sm">Name</Typography>
                         <IconButton size="sm" variant="plain" onClick={() => toggleSort("name")}>{getSortIcon("name")}</IconButton>
                       </Stack>
                     </th>
-                    <th>
+                    <th style={{ width: '30%' }}>
                       <Stack direction="row" spacing={0.5} alignItems="center">
                         <Typography level="body-sm">Category</Typography>
                         <IconButton size="sm" variant="plain" onClick={() => toggleSort("category")}>{getSortIcon("category")}</IconButton>
                       </Stack>
                     </th>
-                    <th>
+                    <th style={{ width: '30%' }}>
                       <Stack direction="row" spacing={0.5} alignItems="center">
                         <Typography level="body-sm">Sub Category</Typography>
                         <IconButton size="sm" variant="plain" onClick={() => toggleSort("subCategory")}>{getSortIcon("subCategory")}</IconButton>
@@ -359,7 +359,7 @@ function App() {
                     </th>
                   </tr>
                   <tr>
-                    <th>
+                    <th style={{ width: '40%' }}>
                       <Input
                         size="sm"
                         value={columnFilters.name}
@@ -367,7 +367,7 @@ function App() {
                         onChange={(event) => setColumnFilters((current) => ({ ...current, name: event.target.value }))}
                       />
                     </th>
-                    <th>
+                    <th style={{ width: '30%' }}>
                       <Autocomplete
                         size="sm"
                         multiple
@@ -388,7 +388,7 @@ function App() {
                         sx={{ minWidth: 0 }}
                       />
                     </th>
-                    <th>
+                    <th style={{ width: '30%' }}>
                       <Autocomplete
                         size="sm"
                         multiple
@@ -424,9 +424,9 @@ function App() {
                         backgroundColor: selectedOsmId === place.osm_id ? "var(--joy-palette-primary-softBg)" : undefined,
                       }}
                     >
-                      <td>{place.name || "(unnamed)"}</td>
-                      <td>{place.category}</td>
-                      <td>{getSubCategoryValue(place)}</td>
+                      <td style={{ width: '40%', fontWeight: 'bold' }}>{place.name || "(unnamed)"}</td>
+                      <td style={{ width: '30%' }}>{place.category}</td>
+                      <td style={{ width: '30%' }}>{getSubCategoryValue(place)}</td>
                     </tr>
                   ))}
                 </tbody>
