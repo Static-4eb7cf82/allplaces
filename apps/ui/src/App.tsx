@@ -7,12 +7,17 @@ import {
   Chip,
   CssBaseline,
   Divider,
+  Dropdown,
   IconButton,
   Input,
+  Menu,
+  MenuButton,
+  MenuItem,
   Sheet,
   Stack,
   Switch,
   Table,
+  Tooltip,
   Typography,
 } from "@mui/joy";
 import { useColorScheme } from "@mui/joy/styles";
@@ -20,12 +25,38 @@ import ArrowDownwardRounded from "@mui/icons-material/ArrowDownwardRounded";
 import ArrowUpwardRounded from "@mui/icons-material/ArrowUpwardRounded";
 import DarkModeRounded from "@mui/icons-material/DarkModeRounded";
 import LightModeRounded from "@mui/icons-material/LightModeRounded";
+import MapRounded from "@mui/icons-material/MapRounded";
 import SyncRounded from "@mui/icons-material/SyncRounded";
 import UnfoldMoreRounded from "@mui/icons-material/UnfoldMoreRounded";
 
 import { fetchPlaces, loadCurrentArea } from "./api";
 import { Place, ViewportBounds } from "./types";
 import { MapPane } from "./components/MapPane";
+
+type BaseMapOption = "positron" | "bright" | "liberty" | "liberty-3d";
+
+const BASE_MAP_STYLES: Record<BaseMapOption, { label: string; styleUrl: string; enable3D: boolean }> = {
+  positron: {
+    label: "Positron",
+    styleUrl: "https://tiles.openfreemap.org/styles/positron",
+    enable3D: false,
+  },
+  bright: {
+    label: "Bright",
+    styleUrl: "https://tiles.openfreemap.org/styles/bright",
+    enable3D: false,
+  },
+  liberty: {
+    label: "Liberty",
+    styleUrl: "https://tiles.openfreemap.org/styles/liberty",
+    enable3D: false,
+  },
+  "liberty-3d": {
+    label: "Liberty (3D)",
+    styleUrl: "https://tiles.openfreemap.org/styles/liberty",
+    enable3D: true,
+  },
+};
 
 const DEFAULT_BOUNDS: ViewportBounds = {
   south: 40.699,
@@ -58,6 +89,7 @@ function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [ghostX, setGhostX] = useState<number | null>(null);
   const dragStartRef = useRef<{ startX: number; startWidth: number } | null>(null);
+  const [baseMapOption, setBaseMapOption] = useState<BaseMapOption>("bright");
 
   const onDividerMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -439,6 +471,39 @@ function App() {
             >
               Load current area
             </Button>
+            <Dropdown>
+              <Tooltip title="Select base map" placement="left">
+                <MenuButton
+                  slots={{ root: IconButton }}
+                  slotProps={{
+                    root: {
+                      size: "sm",
+                      variant: "soft",
+                      sx: {
+                        position: "absolute",
+                        top: 112,
+                        right: 10,
+                        zIndex: 2,
+                        boxShadow: "sm",
+                      },
+                    },
+                  }}
+                >
+                  <MapRounded sx={{ fontSize: 18 }} />
+                </MenuButton>
+              </Tooltip>
+              <Menu placement="bottom-end" sx={{ minWidth: 176 }}>
+                {(Object.entries(BASE_MAP_STYLES) as [BaseMapOption, { label: string; styleUrl: string; enable3D: boolean }][]).map(([key, style]) => (
+                  <MenuItem
+                    key={key}
+                    selected={baseMapOption === key}
+                    onClick={() => setBaseMapOption(key)}
+                  >
+                    {style.label}
+                  </MenuItem>
+                ))}
+              </Menu>
+            </Dropdown>
             <IconButton
               size="sm"
               onClick={() => setMode(mode === "dark" ? "light" : "dark")}
@@ -463,6 +528,8 @@ function App() {
               places={filteredPlaces}
               initialBounds={DEFAULT_BOUNDS}
               selectedOsmId={selectedOsmId}
+              mapStyleUrl={BASE_MAP_STYLES[baseMapOption].styleUrl}
+              enable3D={BASE_MAP_STYLES[baseMapOption].enable3D}
               onViewportChanged={handleViewportChanged}
               onCenterOnReady={(fn) => { centerOnRef.current = fn; }}
             />
