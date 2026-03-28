@@ -85,7 +85,7 @@ function App() {
   const [selectedOsmId, setSelectedOsmId] = useState<string | null>(null);
   const centerOnRef = useRef<((lat: number, lng: number) => void) | null>(null);
   const lastViewportKeyRef = useRef<string>("");
-  const [tableWidth, setTableWidth] = useState(500);
+  const [tableWidth, setTableWidth] = useState(Math.floor(window.innerWidth * 0.35));
   const [isDragging, setIsDragging] = useState(false);
   const [ghostX, setGhostX] = useState<number | null>(null);
   const dragStartRef = useRef<{ startX: number; startWidth: number } | null>(null);
@@ -281,6 +281,7 @@ function App() {
   return (
     <>
       <CssBaseline />
+      {/* Sheet that appears behind table, shows the drag edge  */}
       <Sheet sx={{ height: "100vh", display: "flex", flexDirection: "column", background: "linear-gradient(120deg, rgba(10,147,150,0.15), rgba(238,155,0,0.1))" }}>
         <Box sx={{ display: "flex", flex: 1, minHeight: 0 }}>
           {isDragging && ghostX !== null && (
@@ -310,13 +311,11 @@ function App() {
             />
           )}
           <Sheet
-            variant="outlined"
             sx={{
               width: { xs: "100%", md: tableWidth },
               minWidth: { md: tableWidth },
               maxWidth: { xs: "100%", md: tableWidth },
               flexShrink: 0,
-              borderRight: "none",
               p: 1.5,
               overflow: "auto",
             }}
@@ -342,19 +341,19 @@ function App() {
                     <th style={{ width: '40%' }}>
                       <Stack direction="row" spacing={0.5} alignItems="center">
                         <Typography level="body-sm">Name</Typography>
-                        <IconButton size="sm" variant="plain" onClick={() => toggleSort("name")}>{getSortIcon("name")}</IconButton>
+                        <IconButton size="sm" onClick={() => toggleSort("name")}>{getSortIcon("name")}</IconButton>
                       </Stack>
                     </th>
                     <th style={{ width: '30%' }}>
                       <Stack direction="row" spacing={0.5} alignItems="center">
                         <Typography level="body-sm">Category</Typography>
-                        <IconButton size="sm" variant="plain" onClick={() => toggleSort("category")}>{getSortIcon("category")}</IconButton>
+                        <IconButton size="sm" onClick={() => toggleSort("category")}>{getSortIcon("category")}</IconButton>
                       </Stack>
                     </th>
                     <th style={{ width: '30%' }}>
                       <Stack direction="row" spacing={0.5} alignItems="center">
                         <Typography level="body-sm">Sub Category</Typography>
-                        <IconButton size="sm" variant="plain" onClick={() => toggleSort("subCategory")}>{getSortIcon("subCategory")}</IconButton>
+                        <IconButton size="sm" onClick={() => toggleSort("subCategory")}>{getSortIcon("subCategory")}</IconButton>
                       </Stack>
                     </th>
                   </tr>
