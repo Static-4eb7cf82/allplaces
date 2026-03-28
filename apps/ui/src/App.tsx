@@ -454,6 +454,7 @@ function App() {
           <Box sx={{ flex: 1, minHeight: { xs: 420, md: "auto" }, position: "relative" }}>
             <Button
               variant="soft"
+              size="sm"
               onClick={onLoadCurrentArea}
               loading={isLoadingArea}
               startDecorator={<SyncRounded />}
@@ -464,8 +465,9 @@ function App() {
                 transform: "translateX(-50%)",
                 zIndex: 2,
                 borderRadius: "999px",
-                boxShadow: "md",
-                px: 2,
+                // borderRadius: "12px",
+                boxShadow: "sm",
+                px: 3,
               }}
             >
               Load current area
