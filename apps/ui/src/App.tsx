@@ -472,7 +472,7 @@ function App() {
               Load current area
             </Button>
             <Dropdown>
-              <Tooltip title="Select base map" placement="left">
+              <Tooltip title="Select base map" placement="left" variant="soft">
                 <MenuButton
                   slots={{ root: IconButton }}
                   slotProps={{
@@ -504,20 +504,23 @@ function App() {
                 ))}
               </Menu>
             </Dropdown>
-            <IconButton
-              size="sm"
-              onClick={() => setMode(mode === "dark" ? "light" : "dark")}
-              sx={{
-                backgroundColor: "#ffffff",
-                position: "absolute",
-                top: 150,
-                right: 10,
-                zIndex: 2,
-                boxShadow: "sm",
-              }}
-            >
-              {mode === "dark" ? <LightModeRounded sx={{ fontSize: 18 }} /> : <DarkModeRounded sx={{ fontSize: 18 }} />}
-            </IconButton>
+            <Tooltip title="Toggle light/dark mode" placement="left" variant="soft">
+              <IconButton
+                size="sm"
+                variant="soft"
+                onClick={() => setMode(mode === "dark" ? "light" : "dark")}
+                sx={{
+                  position: "absolute",
+                  top: 150,
+                  right: 10,
+                  zIndex: 2,
+                  boxShadow: "sm",
+                }}
+              >
+                {mode === "dark" ? <LightModeRounded sx={{ fontSize: 18 }} /> : <DarkModeRounded sx={{ fontSize: 18 }} />}
+              </IconButton>
+            </Tooltip>
+
             <MapPane
               places={filteredPlaces}
               initialBounds={DEFAULT_BOUNDS}
