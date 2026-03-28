@@ -2,7 +2,7 @@
 
 Find the place you're looking for. Explore every place in any area with powerful filters and sorting, beyond the limits of traditional map apps.
 
-<img src="assets/wAfxYr4snK.png" width="1280" />
+<img src="assets/zQsaTWuP3A.png" width="1280" />
 
 ## Tech stack
 
