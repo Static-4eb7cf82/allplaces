@@ -15,6 +15,7 @@ Find the place you're looking for. Explore every place in any area with powerful
 
 - apps/ui
 - apps/api
+- apps/osm-ingest-worker
 - apps/database
 - deploy/docker-compose
 
@@ -30,6 +31,36 @@ docker compose -f deploy/docker-compose/docker-compose.yml up --build
 - UI: http://localhost:8080
 - API health: http://localhost:8081/health
 - Postgres: localhost:5432
+
+## Manual OSM Ingest Worker
+
+Build the worker image from the repo root:
+
+```bash
+docker build -t osm-ingest-worker ./apps/osm-ingest-worker
+```
+
+Run the worker manually, mounting a local extract file:
+
+```bash
+docker run --rm \
+	-e PGPASSWORD=allplaces \
+	-v $(pwd)/new-york-latest.osm.pbf:/data/data.osm.pbf \
+	osm-ingest-worker \
+	osm2pgsql \
+		-H localhost \
+		-P 5432 \
+		-U allplaces \
+		-d allplaces \
+		--create \
+		--slim \
+		--hstore \
+		--multi-geometry \
+		--number-processes 4 \
+		/data/data.osm.pbf
+```
+
+Download osm extract files from https://download.geofabrik.de/index.html
 
 ## Core app behavior
 
