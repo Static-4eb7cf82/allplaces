@@ -443,7 +443,7 @@ function App() {
                       onMouseEnter={() => setHoveredOsmId(place.osm_id)}
                       onMouseLeave={() => setHoveredOsmId((current) => (current === place.osm_id ? null : current))}
                       onClick={() => {
-                        setSelectedOsmId(place.osm_id);
+                        setSelectedOsmId((current) => (current === place.osm_id ? null : place.osm_id));
                         centerOnRef.current?.(place.lat, place.lng);
                       }}
                       style={{
@@ -560,7 +560,7 @@ function App() {
               selectedOsmId={selectedOsmId}
               mapStyleUrl={BASE_MAP_STYLES[baseMapOption].styleUrl}
               enable3D={BASE_MAP_STYLES[baseMapOption].enable3D}
-              onPlaceSelected={(osmId) => setSelectedOsmId(osmId)}
+              onPlaceSelected={(osmId) => setSelectedOsmId((current) => (current === osmId ? null : osmId))}
               onViewportChanged={handleViewportChanged}
               onCenterOnReady={(fn) => { centerOnRef.current = fn; }}
             />
