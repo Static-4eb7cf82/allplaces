@@ -42,13 +42,26 @@ docker build -t osm-ingest-worker ./apps/osm-ingest-worker
 
 Run the worker manually, mounting a local extract file:
 
+bash:
 ```bash
+MY_DATA_PATH=$(pwd)/new-york-latest.osm.pbf
 docker run --rm \
 	-e PGPASSWORD=allplaces \
-	-v $(pwd)/new-york-latest.osm.pbf:/data/data.osm.pbf \
+	-v $MY_DATA_PATH:/data/data.osm.pbf \
 	--network allplaces_default \
 	osm-ingest-worker
 ```
+
+pwsh:
+```pwsh
+$MY_DATA_PATH = "$(pwd)/new-york-latest.osm.pbf"
+docker run --rm `
+	-e PGPASSWORD=allplaces `
+	-v ${MY_DATA_PATH}:/data/data.osm.pbf `
+	--network allplaces_default `
+	osm-ingest-worker
+```
+
 
 Optional overrides for `ingest.sh` used by osm-ingest-worker:
 
