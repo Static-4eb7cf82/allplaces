@@ -13,28 +13,39 @@ DROP TABLE IF EXISTS osm_places;
 CREATE TABLE osm_places AS
 SELECT
   osm_id,
-  CASE
-    WHEN amenity IS NOT NULL THEN 'amenity'
-    WHEN office IS NOT NULL THEN 'office'
-    WHEN shop IS NOT NULL THEN 'shop'
-    WHEN service IS NOT NULL THEN 'service'
-    WHEN tourism IS NOT NULL THEN 'tourism'
-    WHEN leisure IS NOT NULL THEN 'leisure'
-    WHEN sport IS NOT NULL THEN 'sport'
-    ELSE 'other'
-  END AS category,
+  place.category,
+  place.sub_category,
   name,
   COALESCE(hstore_to_jsonb(tags), '{}'::jsonb) AS tags,
-  amenity,
-  office,
-  shop,
-  service,
-  tourism,
-  leisure,
-  sport,
-  religion,
   way AS geom
-FROM osm.planet_osm_point
+FROM (
+  SELECT
+    osm_id,
+    name,
+    tags,
+    way,
+    CASE
+      WHEN amenity IS NOT NULL THEN 'amenity'
+      WHEN office IS NOT NULL THEN 'office'
+      WHEN shop IS NOT NULL THEN 'shop'
+      WHEN service IS NOT NULL THEN 'service'
+      WHEN tourism IS NOT NULL THEN 'tourism'
+      WHEN leisure IS NOT NULL THEN 'leisure'
+      WHEN sport IS NOT NULL THEN 'sport'
+      ELSE 'other'
+    END AS category,
+    CASE
+      WHEN amenity IS NOT NULL THEN amenity
+      WHEN office IS NOT NULL THEN office
+      WHEN shop IS NOT NULL THEN shop
+      WHEN service IS NOT NULL THEN service
+      WHEN tourism IS NOT NULL THEN tourism
+      WHEN leisure IS NOT NULL THEN leisure
+      WHEN sport IS NOT NULL THEN sport
+      ELSE NULL
+    END AS sub_category
+  FROM osm.planet_osm_point
+) AS place
 WHERE
   name IS NOT NULL;
 
@@ -51,6 +62,7 @@ ALTER TABLE osm_places
 CREATE INDEX idx_osm_places_geom ON osm_places USING GIST (geom);
 CREATE INDEX idx_osm_places_name_lower ON osm_places (LOWER(name));
 CREATE INDEX idx_osm_places_category ON osm_places (category);
+CREATE INDEX idx_osm_places_sub_category ON osm_places (sub_category);
 
 ANALYZE osm_places;
 

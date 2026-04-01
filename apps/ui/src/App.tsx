@@ -14,7 +14,6 @@ import {
   MenuItem,
   Sheet,
   Stack,
-  Switch,
   Table,
   Tooltip,
   Typography,
@@ -76,7 +75,6 @@ function App() {
     subCategory: [] as string[],
     fuzzySearch: "",
   });
-  const [hasName, setHasName] = useState(true);
   const [sortState, setSortState] = useState<{ column: "name" | "category" | "subCategory" | null; direction: "asc" | "desc" }>({
     column: null,
     direction: "asc",
@@ -160,29 +158,13 @@ function App() {
   );
 
   const getSubCategoryValue = useCallback((place: Place): string => {
-    const value = place.tags?.[place.category];
-    if (value === undefined || value === null) {
+    const value = place.sub_category;
+    if (!value) {
       return "None";
     }
 
-    if (typeof value === "string") {
-      const trimmedValue = value.trim();
-      return trimmedValue || "None";
-    }
-
-    if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
-      return String(value);
-    }
-
-    try {
-      const serializedValue = JSON.stringify(value);
-      if (!serializedValue || serializedValue === "{}" || serializedValue === "[]") {
-        return "None";
-      }
-      return serializedValue;
-    } catch {
-      return "None";
-    }
+    const trimmedValue = value.trim();
+    return trimmedValue || "None";
   }, []);
 
   const availableCategories = useMemo(() => {
@@ -247,10 +229,6 @@ function App() {
 
   const filteredPlaces = useMemo(() => {
     return places.filter((place) => {
-      if (hasName && !place.name) {
-        return false;
-      }
-
       const nameValue = (place.name || "").toLowerCase();
       if (columnFilters.name && !nameValue.includes(columnFilters.name.trim().toLowerCase())) {
         return false;
@@ -277,7 +255,7 @@ function App() {
 
       return true;
     });
-  }, [places, hasName, columnFilters.name, columnFilters.category, columnFilters.subCategory, columnFilters.fuzzySearch, getSubCategoryValue, getPlaceMetadataFields, fuzzyMatch]);
+  }, [places, columnFilters.name, columnFilters.category, columnFilters.subCategory, columnFilters.fuzzySearch, getSubCategoryValue, getPlaceMetadataFields, fuzzyMatch]);
 
   const sortedPlaces = useMemo(() => {
     if (!sortState.column) {
@@ -374,11 +352,6 @@ function App() {
               <Typography level="body-sm" color="neutral">
                 {isLoadingPlaces ? "Refreshing viewport places..." : `${filteredPlaces.length} visible places`}
               </Typography>
-
-              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Typography level="body-sm">Has name</Typography>
-                <Switch checked={hasName} onChange={(event) => setHasName(event.target.checked)} />
-              </Stack>
 
               <Input
                 startDecorator={<SearchRounded />}

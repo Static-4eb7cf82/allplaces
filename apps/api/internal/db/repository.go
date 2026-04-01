@@ -9,12 +9,13 @@ import (
 )
 
 type Place struct {
-	OSMID    string                 `json:"osm_id"`
-	Name     *string                `json:"name,omitempty"`
-	Lat      float64                `json:"lat"`
-	Lng      float64                `json:"lng"`
-	Tags     map[string]interface{} `json:"tags"`
-	Category string                 `json:"category"`
+	OSMID       string                 `json:"osm_id"`
+	Name        *string                `json:"name,omitempty"`
+	Lat         float64                `json:"lat"`
+	Lng         float64                `json:"lng"`
+	Category    string                 `json:"category"`
+	SubCategory *string                `json:"sub_category,omitempty"`
+	Tags        map[string]interface{} `json:"tags"`
 }
 
 type QueryFilters struct {
@@ -70,10 +71,10 @@ func (r *Repository) QueryPlaces(ctx context.Context, filters QueryFilters) ([]P
 			ST_Y(ST_Transform(geom, 4326)) AS lat,
 			ST_X(ST_Transform(geom, 4326)) AS lng,
 			tags,
-			category
+			category,
+			sub_category
 		FROM osm_places
 		WHERE %s
-		ORDER BY LOWER(COALESCE(name, '')) ASC, osm_id ASC
 		LIMIT $%d`, strings.Join(whereParts, " AND "), len(args))
 
 	rows, err := r.pool.Query(ctx, query, args...)
@@ -93,6 +94,7 @@ func (r *Repository) QueryPlaces(ctx context.Context, filters QueryFilters) ([]P
 			&place.Lng,
 			&place.Tags,
 			&place.Category,
+			&place.SubCategory,
 		); err != nil {
 			return nil, err
 		}

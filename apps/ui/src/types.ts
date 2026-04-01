@@ -12,4 +12,5 @@ export type Place = {
   lng: number;
   tags: Record<string, unknown>;
   category: string;
+  sub_category?: string;
 };
