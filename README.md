@@ -46,19 +46,19 @@ Run the worker manually, mounting a local extract file:
 docker run --rm \
 	-e PGPASSWORD=allplaces \
 	-v $(pwd)/new-york-latest.osm.pbf:/data/data.osm.pbf \
-	osm-ingest-worker \
-	osm2pgsql \
-		-H localhost \
-		-P 5432 \
-		-U allplaces \
-		-d allplaces \
-		--create \
-		--slim \
-		--hstore \
-		--multi-geometry \
-		--number-processes 4 \
-		/data/data.osm.pbf
+	--network allplaces_default \
+	osm-ingest-worker
 ```
+
+Optional overrides for `ingest.sh` used by osm-ingest-worker:
+
+- `DB_HOST` (default `db`)
+- `DB_PORT` (default `5432`)
+- `DB_USER` (default `allplaces`)
+- `DB_NAME` (default `allplaces`)
+- `DB_SCHEMA` (default `osm`)
+- `OSM2PGSQL_PROCESSES` (default `4`)
+- first arg: input file path (default `/data/data.osm.pbf`)
 
 Download osm extract files from https://download.geofabrik.de/index.html
 
