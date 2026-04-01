@@ -3,7 +3,6 @@ import {
   Autocomplete,
   AutocompleteOption,
   Box,
-  Button,
   Chip,
   CssBaseline,
   Divider,
@@ -28,11 +27,10 @@ import DataObjectRounded from "@mui/icons-material/DataObjectRounded";
 import DarkModeRounded from "@mui/icons-material/DarkModeRounded";
 import LightModeRounded from "@mui/icons-material/LightModeRounded";
 import MapRounded from "@mui/icons-material/MapRounded";
-import SyncRounded from "@mui/icons-material/SyncRounded";
 import SearchRounded from "@mui/icons-material/SearchRounded";
 import UnfoldMoreRounded from "@mui/icons-material/UnfoldMoreRounded";
 
-import { fetchPlaces, loadCurrentArea } from "./api";
+import { fetchPlaces } from "./api";
 import { Place, ViewportBounds } from "./types";
 import { MapPane } from "./components/MapPane";
 
@@ -83,7 +81,6 @@ function App() {
     column: null,
     direction: "asc",
   });
-  const [isLoadingArea, setIsLoadingArea] = useState(false);
   const [isLoadingPlaces, setIsLoadingPlaces] = useState(false);
   const [status, setStatus] = useState<string>("Ready");
   const [selectedOsmId, setSelectedOsmId] = useState<string | null>(null);
@@ -153,20 +150,6 @@ function App() {
   useEffect(() => {
     refreshViewport(bounds);
   }, [bounds, refreshViewport]);
-
-  const onLoadCurrentArea = async () => {
-    setIsLoadingArea(true);
-    setStatus("Loading current area from Overpass...");
-    try {
-      const result = await loadCurrentArea(bounds);
-      await refreshViewport(bounds);
-      setStatus(`Loaded ${result.fetched} OSM places, upserted ${result.upserted}`);
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Failed to load current area");
-    } finally {
-      setIsLoadingArea(false);
-    }
-  };
 
   const handleViewportChanged = useCallback(
     (nextBounds: ViewportBounds) => {
@@ -548,26 +531,6 @@ function App() {
           />
 
           <Box sx={{ flex: 1, minHeight: { xs: 420, md: "auto" }, position: "relative" }}>
-            <Button
-              variant="soft"
-              size="sm"
-              onClick={onLoadCurrentArea}
-              loading={isLoadingArea}
-              startDecorator={<SyncRounded />}
-              sx={{
-                position: "absolute",
-                top: 12,
-                left: "50%",
-                transform: "translateX(-50%)",
-                zIndex: 2,
-                borderRadius: "999px",
-                // borderRadius: "12px",
-                boxShadow: "sm",
-                px: 3,
-              }}
-            >
-              Load current area
-            </Button>
             <Dropdown>
               <Tooltip title="Select base map" placement="left" variant="soft">
                 <MenuButton
@@ -578,7 +541,7 @@ function App() {
                       variant: "soft",
                       sx: {
                         position: "absolute",
-                        top: 124,
+                        top: 20,
                         right: 20,
                         zIndex: 2,
                         boxShadow: "sm",
@@ -608,7 +571,7 @@ function App() {
                 onClick={() => setMode(mode === "dark" ? "light" : "dark")}
                 sx={{
                   position: "absolute",
-                  top: 164,
+                  top: 60,
                   right: 20,
                   zIndex: 2,
                   boxShadow: "sm",

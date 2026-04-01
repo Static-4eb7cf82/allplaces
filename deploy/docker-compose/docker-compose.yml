@@ -29,7 +29,6 @@ services:
     environment:
       PORT: 8081
       DATABASE_URL: postgres://allplaces:allplaces@db:5432/allplaces?sslmode=disable
-      OVERPASS_URL: https://overpass-api.de/api/interpreter
       QUERY_PLACES_LIMIT: 30000
     ports:
       - "8081:8081"

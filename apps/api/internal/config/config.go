@@ -6,20 +6,16 @@ import (
 )
 
 type Config struct {
-	Port                   string
-	DatabaseURL            string
-	OverpassURL            string
-	OverpassTimeoutSeconds int
-	QueryPlacesLimit       int
+	Port             string
+	DatabaseURL      string
+	QueryPlacesLimit int
 }
 
 func Load() Config {
 	return Config{
-		Port:                   getEnv("PORT", "8081"),
-		DatabaseURL:            getEnv("DATABASE_URL", "postgres://allplaces:allplaces@db:5432/allplaces?sslmode=disable"),
-		OverpassURL:            getEnv("OVERPASS_URL", "https://overpass-api.de/api/interpreter"),
-		OverpassTimeoutSeconds: 30,
-		QueryPlacesLimit:       getEnvInt("QUERY_PLACES_LIMIT", 30000),
+		Port:             getEnv("PORT", "8081"),
+		DatabaseURL:      getEnv("DATABASE_URL", "postgres://allplaces:allplaces@db:5432/allplaces?sslmode=disable"),
+		QueryPlacesLimit: getEnvInt("QUERY_PLACES_LIMIT", 30000),
 	}
 }
 

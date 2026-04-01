@@ -11,7 +11,6 @@ import (
 	"allplaces/api/internal/api"
 	"allplaces/api/internal/config"
 	"allplaces/api/internal/db"
-	"allplaces/api/internal/osm"
 )
 
 func main() {
@@ -24,8 +23,7 @@ func main() {
 	defer database.Close()
 
 	repo := db.NewRepository(database)
-	overpassClient := osm.NewOverpassClient(cfg.OverpassURL, time.Duration(cfg.OverpassTimeoutSeconds)*time.Second)
-	handler := api.NewHandler(repo, overpassClient, cfg.QueryPlacesLimit)
+	handler := api.NewHandler(repo, cfg.QueryPlacesLimit)
 	router := api.NewRouter(handler)
 
 	srv := &http.Server{

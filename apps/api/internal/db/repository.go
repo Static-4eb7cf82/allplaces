@@ -2,23 +2,20 @@ package db
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Place struct {
-	OSMID     string                 `json:"osm_id"`
-	Type      string                 `json:"type"`
-	Name      *string                `json:"name,omitempty"`
-	Lat       float64                `json:"lat"`
-	Lng       float64                `json:"lng"`
-	Tags      map[string]interface{} `json:"tags"`
-	FetchedAt string                 `json:"fetched_at,omitempty"`
-	Category  string                 `json:"category"`
+	OSMID    string                 `json:"osm_id"`
+	Type     string                 `json:"type"`
+	Name     *string                `json:"name,omitempty"`
+	Lat      float64                `json:"lat"`
+	Lng      float64                `json:"lng"`
+	Tags     map[string]interface{} `json:"tags"`
+	Category string                 `json:"category"`
 }
 
 type QueryFilters struct {
@@ -40,62 +37,28 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
-func (r *Repository) UpsertPlaces(ctx context.Context, places []Place) (int64, error) {
-	if len(places) == 0 {
-		return 0, nil
-	}
-
-	batch := &pgx.Batch{}
-	for _, place := range places {
-		tagsBytes, err := json.Marshal(place.Tags)
-		if err != nil {
-			return 0, fmt.Errorf("marshal tags for %s: %w", place.OSMID, err)
-		}
-
-		batch.Queue(
-			`INSERT INTO osm_places (osm_id, type, name, lat, lng, tags)
-			 VALUES ($1, $2, $3, $4, $5, $6::jsonb)
-			 ON CONFLICT (osm_id)
-			 DO UPDATE SET
-			   type = EXCLUDED.type,
-			   name = EXCLUDED.name,
-			   lat = EXCLUDED.lat,
-			   lng = EXCLUDED.lng,
-			   tags = EXCLUDED.tags,
-			   fetched_at = NOW()`,
-			place.OSMID,
-			place.Type,
-			place.Name,
-			place.Lat,
-			place.Lng,
-			string(tagsBytes),
-		)
-	}
-
-	results := r.pool.SendBatch(ctx, batch)
-	defer results.Close()
-
-	var count int64
-	for i := 0; i < len(places); i++ {
-		if _, err := results.Exec(); err != nil {
-			return count, fmt.Errorf("upsert batch item %d: %w", i, err)
-		}
-		count++
-	}
-
-	return count, nil
-}
-
 func (r *Repository) QueryPlaces(ctx context.Context, filters QueryFilters) ([]Place, error) {
 	limit := filters.Limit
 	if limit <= 0 {
 		limit = 30000
 	}
 
-	args := []interface{}{filters.South, filters.North, filters.West, filters.East}
+	categoryExpr := `CASE
+		WHEN amenity IS NOT NULL THEN 'amenity'
+		WHEN office IS NOT NULL THEN 'office'
+		WHEN shop IS NOT NULL THEN 'shop'
+		WHEN service IS NOT NULL THEN 'service'
+		WHEN tourism IS NOT NULL THEN 'tourism'
+		WHEN leisure IS NOT NULL THEN 'leisure'
+		WHEN sport IS NOT NULL THEN 'sport'
+		WHEN religion IS NOT NULL THEN 'religion'
+		ELSE 'other'
+	END`
+
+	args := []interface{}{filters.West, filters.South, filters.East, filters.North}
 	whereParts := []string{
-		"lat BETWEEN $1 AND $2",
-		"lng BETWEEN $3 AND $4",
+		"geom && ST_Transform(ST_MakeEnvelope($1, $2, $3, $4, 4326), 3857)",
+		"ST_Intersects(geom, ST_Transform(ST_MakeEnvelope($1, $2, $3, $4, 4326), 3857))",
 	}
 
 	if strings.TrimSpace(filters.Search) != "" {
@@ -105,15 +68,7 @@ func (r *Repository) QueryPlaces(ctx context.Context, filters QueryFilters) ([]P
 
 	if strings.TrimSpace(filters.Category) != "" {
 		args = append(args, strings.TrimSpace(filters.Category))
-		whereParts = append(whereParts, fmt.Sprintf(`
-			CASE
-				WHEN tags ? 'amenity' THEN 'amenity'
-				WHEN tags ? 'shop' THEN 'shop'
-				WHEN tags ? 'tourism' THEN 'tourism'
-				WHEN tags ? 'leisure' THEN 'leisure'
-				WHEN tags ? 'office' THEN 'office'
-				ELSE 'other'
-			END = $%d`, len(args)))
+		whereParts = append(whereParts, fmt.Sprintf("%s = $%d", categoryExpr, len(args)))
 	}
 
 	if filters.HasName {
@@ -123,25 +78,26 @@ func (r *Repository) QueryPlaces(ctx context.Context, filters QueryFilters) ([]P
 	args = append(args, limit)
 	query := fmt.Sprintf(`
 		SELECT
-			osm_id,
-			type,
+			osm_id::text,
+			'node' AS type,
 			name,
-			lat,
-			lng,
-			tags,
-			fetched_at::text,
-			CASE
-				WHEN tags ? 'amenity' THEN 'amenity'
-				WHEN tags ? 'shop' THEN 'shop'
-				WHEN tags ? 'tourism' THEN 'tourism'
-				WHEN tags ? 'leisure' THEN 'leisure'
-				WHEN tags ? 'office' THEN 'office'
-				ELSE 'other'
-			END AS category
+			ST_Y(ST_Transform(geom, 4326)) AS lat,
+			ST_X(ST_Transform(geom, 4326)) AS lng,
+			jsonb_strip_nulls(jsonb_build_object(
+				'amenity', amenity,
+				'office', office,
+				'shop', shop,
+				'service', service,
+				'tourism', tourism,
+				'leisure', leisure,
+				'sport', sport,
+				'religion', religion
+			)) AS tags,
+			%s AS category
 		FROM osm_places
 		WHERE %s
-		ORDER BY fetched_at DESC
-		LIMIT $%d`, strings.Join(whereParts, " AND "), len(args))
+		ORDER BY LOWER(COALESCE(name, '')) ASC, osm_id ASC
+		LIMIT $%d`, categoryExpr, strings.Join(whereParts, " AND "), len(args))
 
 	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
@@ -152,22 +108,17 @@ func (r *Repository) QueryPlaces(ctx context.Context, filters QueryFilters) ([]P
 	places := make([]Place, 0, limit)
 	for rows.Next() {
 		var place Place
-		var tagsBytes []byte
+		place.Tags = map[string]interface{}{}
 		if err := rows.Scan(
 			&place.OSMID,
 			&place.Type,
 			&place.Name,
 			&place.Lat,
 			&place.Lng,
-			&tagsBytes,
-			&place.FetchedAt,
+			&place.Tags,
 			&place.Category,
 		); err != nil {
 			return nil, err
-		}
-
-		if err := json.Unmarshal(tagsBytes, &place.Tags); err != nil {
-			place.Tags = map[string]interface{}{}
 		}
 		places = append(places, place)
 	}

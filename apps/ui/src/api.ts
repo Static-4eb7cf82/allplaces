@@ -2,22 +2,6 @@ import { Place, ViewportBounds } from "./types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8081";
 
-export async function loadCurrentArea(bounds: ViewportBounds): Promise<{ fetched: number; upserted: number }> {
-  const response = await fetch(`${API_BASE_URL}/api/places/load`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(bounds),
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to load current area from Overpass API");
-  }
-
-  return response.json();
-}
-
 export async function fetchPlaces(bounds: ViewportBounds): Promise<Place[]> {
   const params = new URLSearchParams({
     south: String(bounds.south),
