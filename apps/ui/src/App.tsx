@@ -560,6 +560,7 @@ function App() {
               selectedOsmId={selectedOsmId}
               mapStyleUrl={BASE_MAP_STYLES[baseMapOption].styleUrl}
               enable3D={BASE_MAP_STYLES[baseMapOption].enable3D}
+              onPlaceSelected={(osmId) => setSelectedOsmId(osmId)}
               onViewportChanged={handleViewportChanged}
               onCenterOnReady={(fn) => { centerOnRef.current = fn; }}
             />

@@ -12,6 +12,7 @@ type Props = {
   selectedOsmId: string | null;
   mapStyleUrl: string;
   enable3D: boolean;
+  onPlaceSelected: (osmId: string) => void;
   onViewportChanged: (bounds: ViewportBounds) => void;
   onCenterOnReady: (fn: (lat: number, lng: number) => void) => void;
 };
@@ -34,26 +35,56 @@ function toPlaceFeatures(places: Place[]) {
   }));
 }
 
+function buildPlacePopupHtml(place: Place) {
+  const displayName = place.name || "Unnamed place";
+  const subCategory = place.sub_category?.trim() || "None";
+  const previewTags = Object.entries(place.tags || {}).slice(0, 4);
+  const tagsHtml = previewTags.length > 0
+    ? `<div style="display:grid;grid-template-columns:auto 1fr;column-gap:10px;row-gap:4px;margin-top:8px">${previewTags
+        .map(([key, value]) => `<span style="font-size:11px;color:#5c667a;text-transform:capitalize">${key}</span><span style="font-size:12px;color:#102a43">${String(value)}</span>`)
+        .join("")}</div>`
+    : "";
+
+  return `
+    <div style="min-width:220px;max-width:280px;font-family:system-ui,Segoe UI,sans-serif;padding:2px 0">
+      <div style="font-size:15px;font-weight:700;color:#102a43;line-height:1.25;margin-bottom:6px">${displayName}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        <span style="font-size:11px;padding:2px 8px;border-radius:999px;background:#e8f3f1;color:#0a6c6f">${place.category || "Unknown"}</span>
+        <span style="font-size:11px;padding:2px 8px;border-radius:999px;background:#fff3e1;color:#9b5a00">${subCategory}</span>
+      </div>
+      <div style="font-size:11px;color:#5c667a">OSM ID</div>
+      <div style="font-size:12px;color:#102a43;word-break:break-all">${place.osm_id}</div>
+      <div style="margin-top:8px;font-size:11px;color:#5c667a">Location</div>
+      <div style="font-size:12px;color:#102a43">${place.lat.toFixed(5)}, ${place.lng.toFixed(5)}</div>
+      ${tagsHtml}
+    </div>
+  `;
+}
+
 export function MapPane({
   places,
   initialBounds,
   selectedOsmId,
   mapStyleUrl,
   enable3D,
+  onPlaceSelected,
   onViewportChanged,
   onCenterOnReady,
 }: Props) {
   const { mode } = useColorScheme();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
+  const popupRef = useRef<maplibregl.Popup | null>(null);
   const onViewportChangedRef = useRef(onViewportChanged);
   const onCenterOnReadyRef = useRef(onCenterOnReady);
+  const onPlaceSelectedRef = useRef(onPlaceSelected);
   const placesRef = useRef(places);
   const selectedOsmIdRef = useRef(selectedOsmId);
   const enable3DRef = useRef(enable3D);
   const currentStyleUrlRef = useRef(mapStyleUrl);
   onViewportChangedRef.current = onViewportChanged;
   onCenterOnReadyRef.current = onCenterOnReady;
+  onPlaceSelectedRef.current = onPlaceSelected;
   placesRef.current = places;
   selectedOsmIdRef.current = selectedOsmId;
   enable3DRef.current = enable3D;
@@ -110,6 +141,31 @@ export function MapPane({
           properties: { osm_id: selectedPlace.osm_id },
         }],
       });
+    };
+
+    const syncPopup = (map: Map) => {
+      const selectedId = selectedOsmIdRef.current;
+      if (!selectedId) {
+        popupRef.current?.remove();
+        popupRef.current = null;
+        return;
+      }
+
+      const selectedPlace = placesRef.current.find((p) => p.osm_id === selectedId);
+      if (!selectedPlace) {
+        popupRef.current?.remove();
+        popupRef.current = null;
+        return;
+      }
+
+      if (!popupRef.current) {
+        popupRef.current = new maplibregl.Popup({ closeButton: true, closeOnClick: false, offset: 14 });
+      }
+
+      popupRef.current
+        .setLngLat([selectedPlace.lng, selectedPlace.lat])
+        .setHTML(buildPlacePopupHtml(selectedPlace))
+        .addTo(map);
     };
 
     const ensureCustomLayers = (map: Map) => {
@@ -191,6 +247,7 @@ export function MapPane({
       }
 
       syncPlaceData(map);
+      syncPopup(map);
       apply3DState(map);
     };
 
@@ -208,21 +265,42 @@ export function MapPane({
     });
 
     map.on("click", (event) => {
-      const features = map.queryRenderedFeatures(event.point, { layers: ["clusters"] });
-      const clusterId = features[0]?.properties?.cluster_id;
-      const source = map.getSource(SOURCE_ID) as GeoJSONSource | undefined;
-      if (!source || clusterId === undefined) {
+      const interactiveFeatures = map.queryRenderedFeatures(event.point, {
+        layers: ["clusters", "unclustered-point", "selected-point"],
+      });
+      const feature = interactiveFeatures[0];
+      if (!feature) {
         return;
       }
-      source
-        .getClusterExpansionZoom(Number(clusterId))
-        .then((zoom) => {
-          const [lng, lat] = features[0].geometry.type === "Point" ? features[0].geometry.coordinates : [0, 0];
-          map.easeTo({ center: [lng, lat], zoom });
-        })
-        .catch(() => {
-          // Ignore transient cluster expansion failures.
-        });
+
+      const isCluster = feature.properties?.point_count !== undefined;
+      if (isCluster) {
+        const clusterId = feature.properties?.cluster_id;
+        const source = map.getSource(SOURCE_ID) as GeoJSONSource | undefined;
+        if (!source || clusterId === undefined) {
+          return;
+        }
+        source
+          .getClusterExpansionZoom(Number(clusterId))
+          .then((zoom) => {
+            const [lng, lat] = feature.geometry.type === "Point" ? feature.geometry.coordinates : [0, 0];
+            map.easeTo({ center: [lng, lat], zoom });
+          })
+          .catch(() => {
+            // Ignore transient cluster expansion failures.
+          });
+        return;
+      }
+
+      const osmId = feature.properties?.osm_id;
+      if (typeof osmId === "string") {
+        onPlaceSelectedRef.current(osmId);
+      }
+    });
+
+    map.on("mousemove", (event) => {
+      const features = map.queryRenderedFeatures(event.point, { layers: ["unclustered-point", "selected-point"] });
+      map.getCanvas().style.cursor = features.length > 0 ? "pointer" : "";
     });
 
     map.on("moveend", () => {
@@ -254,6 +332,8 @@ export function MapPane({
     });
 
     return () => {
+      popupRef.current?.remove();
+      popupRef.current = null;
       map.remove();
       mapRef.current = null;
     };
@@ -338,6 +418,15 @@ export function MapPane({
         properties: { osm_id: place.osm_id },
       }],
     });
+
+    if (!popupRef.current) {
+      popupRef.current = new maplibregl.Popup({ closeButton: true, closeOnClick: false, offset: 14 });
+    }
+
+    popupRef.current
+      .setLngLat([place.lng, place.lat])
+      .setHTML(buildPlacePopupHtml(place))
+      .addTo(map);
   }, [selectedOsmId, places]);
 
   return (
