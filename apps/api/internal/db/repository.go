@@ -43,18 +43,6 @@ func (r *Repository) QueryPlaces(ctx context.Context, filters QueryFilters) ([]P
 		limit = 30000
 	}
 
-	categoryExpr := `CASE
-		WHEN amenity IS NOT NULL THEN 'amenity'
-		WHEN office IS NOT NULL THEN 'office'
-		WHEN shop IS NOT NULL THEN 'shop'
-		WHEN service IS NOT NULL THEN 'service'
-		WHEN tourism IS NOT NULL THEN 'tourism'
-		WHEN leisure IS NOT NULL THEN 'leisure'
-		WHEN sport IS NOT NULL THEN 'sport'
-		WHEN religion IS NOT NULL THEN 'religion'
-		ELSE 'other'
-	END`
-
 	args := []interface{}{filters.West, filters.South, filters.East, filters.North}
 	whereParts := []string{
 		"geom && ST_Transform(ST_MakeEnvelope($1, $2, $3, $4, 4326), 3857)",
@@ -68,7 +56,7 @@ func (r *Repository) QueryPlaces(ctx context.Context, filters QueryFilters) ([]P
 
 	if strings.TrimSpace(filters.Category) != "" {
 		args = append(args, strings.TrimSpace(filters.Category))
-		whereParts = append(whereParts, fmt.Sprintf("%s = $%d", categoryExpr, len(args)))
+		whereParts = append(whereParts, fmt.Sprintf("category = $%d", len(args)))
 	}
 
 	if filters.HasName {
@@ -93,11 +81,11 @@ func (r *Repository) QueryPlaces(ctx context.Context, filters QueryFilters) ([]P
 				'sport', sport,
 				'religion', religion
 			)) AS tags,
-			%s AS category
+			category
 		FROM osm_places
 		WHERE %s
 		ORDER BY LOWER(COALESCE(name, '')) ASC, osm_id ASC
-		LIMIT $%d`, categoryExpr, strings.Join(whereParts, " AND "), len(args))
+		LIMIT $%d`, strings.Join(whereParts, " AND "), len(args))
 
 	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {

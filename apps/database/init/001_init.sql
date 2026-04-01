@@ -4,6 +4,7 @@ CREATE SCHEMA IF NOT EXISTS osm AUTHORIZATION allplaces;
 
 CREATE TABLE IF NOT EXISTS osm_places (
   osm_id BIGINT PRIMARY KEY,
+  category TEXT NOT NULL CHECK (category IN ('amenity', 'office', 'shop', 'service', 'tourism', 'leisure', 'sport', 'other')),
   name TEXT,
   amenity TEXT,
   office TEXT,
@@ -18,6 +19,4 @@ CREATE TABLE IF NOT EXISTS osm_places (
 
 CREATE INDEX IF NOT EXISTS idx_osm_places_geom ON osm_places USING GIST (geom);
 CREATE INDEX IF NOT EXISTS idx_osm_places_name_lower ON osm_places (LOWER(name));
-CREATE INDEX IF NOT EXISTS idx_osm_places_category ON osm_places (
-  COALESCE(amenity, office, shop, service, tourism, leisure, sport, religion)
-);
+CREATE INDEX IF NOT EXISTS idx_osm_places_category ON osm_places (category);
