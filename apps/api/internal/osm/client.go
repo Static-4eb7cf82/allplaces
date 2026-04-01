@@ -97,7 +97,6 @@ func (c *OverpassClient) FetchPlaces(ctx context.Context, south, west, north, ea
 
 		place := db.Place{
 			OSMID: fmt.Sprintf("%s:%d", osmType, element.ID),
-			Type:  osmType,
 			Name:  name,
 			Lat:   lat,
 			Lng:   lng,

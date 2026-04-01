@@ -3,7 +3,6 @@ import {
   Autocomplete,
   AutocompleteOption,
   Box,
-  Button,
   Chip,
   CssBaseline,
   Divider,
@@ -15,7 +14,6 @@ import {
   MenuItem,
   Sheet,
   Stack,
-  Switch,
   Table,
   Tooltip,
   Typography,
@@ -28,11 +26,10 @@ import DataObjectRounded from "@mui/icons-material/DataObjectRounded";
 import DarkModeRounded from "@mui/icons-material/DarkModeRounded";
 import LightModeRounded from "@mui/icons-material/LightModeRounded";
 import MapRounded from "@mui/icons-material/MapRounded";
-import SyncRounded from "@mui/icons-material/SyncRounded";
 import SearchRounded from "@mui/icons-material/SearchRounded";
 import UnfoldMoreRounded from "@mui/icons-material/UnfoldMoreRounded";
 
-import { fetchPlaces, loadCurrentArea } from "./api";
+import { fetchPlaces } from "./api";
 import { Place, ViewportBounds } from "./types";
 import { MapPane } from "./components/MapPane";
 
@@ -78,12 +75,10 @@ function App() {
     subCategory: [] as string[],
     fuzzySearch: "",
   });
-  const [hasName, setHasName] = useState(true);
   const [sortState, setSortState] = useState<{ column: "name" | "category" | "subCategory" | null; direction: "asc" | "desc" }>({
     column: null,
     direction: "asc",
   });
-  const [isLoadingArea, setIsLoadingArea] = useState(false);
   const [isLoadingPlaces, setIsLoadingPlaces] = useState(false);
   const [status, setStatus] = useState<string>("Ready");
   const [selectedOsmId, setSelectedOsmId] = useState<string | null>(null);
@@ -154,20 +149,6 @@ function App() {
     refreshViewport(bounds);
   }, [bounds, refreshViewport]);
 
-  const onLoadCurrentArea = async () => {
-    setIsLoadingArea(true);
-    setStatus("Loading current area from Overpass...");
-    try {
-      const result = await loadCurrentArea(bounds);
-      await refreshViewport(bounds);
-      setStatus(`Loaded ${result.fetched} OSM places, upserted ${result.upserted}`);
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Failed to load current area");
-    } finally {
-      setIsLoadingArea(false);
-    }
-  };
-
   const handleViewportChanged = useCallback(
     (nextBounds: ViewportBounds) => {
       setBounds(nextBounds);
@@ -177,29 +158,13 @@ function App() {
   );
 
   const getSubCategoryValue = useCallback((place: Place): string => {
-    const value = place.tags?.[place.category];
-    if (value === undefined || value === null) {
+    const value = place.sub_category;
+    if (!value) {
       return "None";
     }
 
-    if (typeof value === "string") {
-      const trimmedValue = value.trim();
-      return trimmedValue || "None";
-    }
-
-    if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
-      return String(value);
-    }
-
-    try {
-      const serializedValue = JSON.stringify(value);
-      if (!serializedValue || serializedValue === "{}" || serializedValue === "[]") {
-        return "None";
-      }
-      return serializedValue;
-    } catch {
-      return "None";
-    }
+    const trimmedValue = value.trim();
+    return trimmedValue || "None";
   }, []);
 
   const availableCategories = useMemo(() => {
@@ -264,10 +229,6 @@ function App() {
 
   const filteredPlaces = useMemo(() => {
     return places.filter((place) => {
-      if (hasName && !place.name) {
-        return false;
-      }
-
       const nameValue = (place.name || "").toLowerCase();
       if (columnFilters.name && !nameValue.includes(columnFilters.name.trim().toLowerCase())) {
         return false;
@@ -294,7 +255,7 @@ function App() {
 
       return true;
     });
-  }, [places, hasName, columnFilters.name, columnFilters.category, columnFilters.subCategory, columnFilters.fuzzySearch, getSubCategoryValue, getPlaceMetadataFields, fuzzyMatch]);
+  }, [places, columnFilters.name, columnFilters.category, columnFilters.subCategory, columnFilters.fuzzySearch, getSubCategoryValue, getPlaceMetadataFields, fuzzyMatch]);
 
   const sortedPlaces = useMemo(() => {
     if (!sortState.column) {
@@ -392,11 +353,6 @@ function App() {
                 {isLoadingPlaces ? "Refreshing viewport places..." : `${filteredPlaces.length} visible places`}
               </Typography>
 
-              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Typography level="body-sm">Has name</Typography>
-                <Switch checked={hasName} onChange={(event) => setHasName(event.target.checked)} />
-              </Stack>
-
               <Input
                 startDecorator={<SearchRounded />}
                 size="sm"
@@ -414,13 +370,13 @@ function App() {
                         <IconButton size="sm" onClick={() => toggleSort("name")}>{getSortIcon("name")}</IconButton>
                       </Stack>
                     </th>
-                    <th style={{ width: '30%' }}>
+                    <th>
                       <Stack direction="row" spacing={0.5} alignItems="center">
                         <Typography level="body-sm">Category</Typography>
                         <IconButton size="sm" onClick={() => toggleSort("category")}>{getSortIcon("category")}</IconButton>
                       </Stack>
                     </th>
-                    <th style={{ width: '30%' }}>
+                    <th>
                       <Stack direction="row" spacing={0.5} alignItems="center">
                         <Typography level="body-sm">Sub Category</Typography>
                         <IconButton size="sm" onClick={() => toggleSort("subCategory")}>{getSortIcon("subCategory")}</IconButton>
@@ -436,7 +392,7 @@ function App() {
                         onChange={(event) => setColumnFilters((current) => ({ ...current, name: event.target.value }))}
                       />
                     </th>
-                    <th style={{ width: '30%' }}>
+                    <th>
                       <Autocomplete
                         size="sm"
                         multiple
@@ -457,7 +413,7 @@ function App() {
                         sx={{ minWidth: 0 }}
                       />
                     </th>
-                    <th style={{ width: '30%' }}>
+                    <th>
                       <Autocomplete
                         size="sm"
                         multiple
@@ -495,9 +451,9 @@ function App() {
                         backgroundColor: selectedOsmId === place.osm_id ? "var(--joy-palette-primary-softBg)" : undefined,
                       }}
                     >
-                      <td style={{ width: '40%', fontWeight: 'bold' }}>{place.name || "(unnamed)"}</td>
-                      <td style={{ width: '30%' }}>{place.category}</td>
-                      <td style={{ width: '30%', position: 'relative', paddingRight: '38px' }}>
+                      <td style={{ fontWeight: 'bold' }}>{place.name || "(unnamed)"}</td>
+                      <td>{place.category}</td>
+                      <td style={{ position: 'relative', paddingRight: '38px' }}>
                         {getSubCategoryValue(place)}
                         {hoveredOsmId === place.osm_id && (
                           <Tooltip title="Show raw JSON" placement="left" variant="soft">
@@ -548,26 +504,6 @@ function App() {
           />
 
           <Box sx={{ flex: 1, minHeight: { xs: 420, md: "auto" }, position: "relative" }}>
-            <Button
-              variant="soft"
-              size="sm"
-              onClick={onLoadCurrentArea}
-              loading={isLoadingArea}
-              startDecorator={<SyncRounded />}
-              sx={{
-                position: "absolute",
-                top: 12,
-                left: "50%",
-                transform: "translateX(-50%)",
-                zIndex: 2,
-                borderRadius: "999px",
-                // borderRadius: "12px",
-                boxShadow: "sm",
-                px: 3,
-              }}
-            >
-              Load current area
-            </Button>
             <Dropdown>
               <Tooltip title="Select base map" placement="left" variant="soft">
                 <MenuButton

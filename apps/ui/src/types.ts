@@ -7,11 +7,10 @@ export type ViewportBounds = {
 
 export type Place = {
   osm_id: string;
-  type: "node" | "way" | "relation";
   name?: string;
   lat: number;
   lng: number;
   tags: Record<string, unknown>;
-  fetched_at?: string;
   category: string;
+  sub_category?: string;
 };

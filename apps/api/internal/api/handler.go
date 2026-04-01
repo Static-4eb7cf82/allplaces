@@ -10,67 +10,24 @@ import (
 	"time"
 
 	"allplaces/api/internal/db"
-	"allplaces/api/internal/osm"
 
 	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
-	repo           *db.Repository
-	overpassClient *osm.OverpassClient
-	queryLimit     int
+	repo       *db.Repository
+	queryLimit int
 }
 
-type loadRequest struct {
-	South float64 `json:"south" binding:"required"`
-	West  float64 `json:"west" binding:"required"`
-	North float64 `json:"north" binding:"required"`
-	East  float64 `json:"east" binding:"required"`
-}
-
-func NewHandler(repo *db.Repository, overpassClient *osm.OverpassClient, queryLimit int) *Handler {
+func NewHandler(repo *db.Repository, queryLimit int) *Handler {
 	if queryLimit <= 0 {
 		queryLimit = 30000
 	}
-	return &Handler{repo: repo, overpassClient: overpassClient, queryLimit: queryLimit}
+	return &Handler{repo: repo, queryLimit: queryLimit}
 }
 
 func (h *Handler) Health(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
-}
-
-func (h *Handler) LoadPlaces(c *gin.Context) {
-	var req loadRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 35*time.Second)
-	defer cancel()
-
-	places, err := h.overpassClient.FetchPlaces(ctx, req.South, req.West, req.North, req.East)
-	if err != nil {
-		log.Printf("overpass fetch failed: %v", err)
-		status := http.StatusBadGateway
-		if strings.Contains(strings.ToLower(err.Error()), "status=429") {
-			status = http.StatusTooManyRequests
-		}
-		c.JSON(status, gin.H{"error": "failed to fetch places from overpass"})
-		return
-	}
-
-	upserted, err := h.repo.UpsertPlaces(ctx, places)
-	if err != nil {
-		log.Printf("db upsert failed: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save places"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"fetched":  len(places),
-		"upserted": upserted,
-	})
 }
 
 func (h *Handler) QueryPlaces(c *gin.Context) {

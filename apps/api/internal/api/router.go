@@ -9,7 +9,6 @@ func NewRouter(handler *Handler) *gin.Engine {
 	r.GET("/health", handler.Health)
 	api := r.Group("/api")
 	{
-		api.POST("/places/load", handler.LoadPlaces)
 		api.GET("/places", handler.QueryPlaces)
 	}
 
@@ -20,7 +19,7 @@ func corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
 			return
