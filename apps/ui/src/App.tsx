@@ -370,13 +370,13 @@ function App() {
                         <IconButton size="sm" onClick={() => toggleSort("name")}>{getSortIcon("name")}</IconButton>
                       </Stack>
                     </th>
-                    <th style={{ width: '30%' }}>
+                    <th>
                       <Stack direction="row" spacing={0.5} alignItems="center">
                         <Typography level="body-sm">Category</Typography>
                         <IconButton size="sm" onClick={() => toggleSort("category")}>{getSortIcon("category")}</IconButton>
                       </Stack>
                     </th>
-                    <th style={{ width: '30%' }}>
+                    <th>
                       <Stack direction="row" spacing={0.5} alignItems="center">
                         <Typography level="body-sm">Sub Category</Typography>
                         <IconButton size="sm" onClick={() => toggleSort("subCategory")}>{getSortIcon("subCategory")}</IconButton>
@@ -392,7 +392,7 @@ function App() {
                         onChange={(event) => setColumnFilters((current) => ({ ...current, name: event.target.value }))}
                       />
                     </th>
-                    <th style={{ width: '30%' }}>
+                    <th>
                       <Autocomplete
                         size="sm"
                         multiple
@@ -413,7 +413,7 @@ function App() {
                         sx={{ minWidth: 0 }}
                       />
                     </th>
-                    <th style={{ width: '30%' }}>
+                    <th>
                       <Autocomplete
                         size="sm"
                         multiple
@@ -451,9 +451,9 @@ function App() {
                         backgroundColor: selectedOsmId === place.osm_id ? "var(--joy-palette-primary-softBg)" : undefined,
                       }}
                     >
-                      <td style={{ width: '40%', fontWeight: 'bold' }}>{place.name || "(unnamed)"}</td>
-                      <td style={{ width: '30%' }}>{place.category}</td>
-                      <td style={{ width: '30%', position: 'relative', paddingRight: '38px' }}>
+                      <td style={{ fontWeight: 'bold' }}>{place.name || "(unnamed)"}</td>
+                      <td>{place.category}</td>
+                      <td style={{ position: 'relative', paddingRight: '38px' }}>
                         {getSubCategoryValue(place)}
                         {hoveredOsmId === place.osm_id && (
                           <Tooltip title="Show raw JSON" placement="left" variant="soft">
