@@ -1,5 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Box from "@mui/joy/Box";
+import Chip from "@mui/joy/Chip";
+import Divider from "@mui/joy/Divider";
+import Sheet from "@mui/joy/Sheet";
+import Stack from "@mui/joy/Stack";
+import Typography from "@mui/joy/Typography";
 import { useColorScheme } from "@mui/joy/styles";
 import maplibregl, { GeoJSONSource, Map } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -35,32 +40,6 @@ function toPlaceFeatures(places: Place[]) {
   }));
 }
 
-function buildPlacePopupHtml(place: Place) {
-  const displayName = place.name || "Unnamed place";
-  const subCategory = place.sub_category?.trim() || "None";
-  const previewTags = Object.entries(place.tags || {}).slice(0, 4);
-  const tagsHtml = previewTags.length > 0
-    ? `<div style="display:grid;grid-template-columns:auto 1fr;column-gap:10px;row-gap:4px;margin-top:8px">${previewTags
-        .map(([key, value]) => `<span style="font-size:11px;color:#5c667a;text-transform:capitalize">${key}</span><span style="font-size:12px;color:#102a43">${String(value)}</span>`)
-        .join("")}</div>`
-    : "";
-
-  return `
-    <div style="min-width:220px;max-width:280px;font-family:system-ui,Segoe UI,sans-serif;padding:2px 0">
-      <div style="font-size:15px;font-weight:700;color:#102a43;line-height:1.25;margin-bottom:6px">${displayName}</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
-        <span style="font-size:11px;padding:2px 8px;border-radius:999px;background:#e8f3f1;color:#0a6c6f">${place.category || "Unknown"}</span>
-        <span style="font-size:11px;padding:2px 8px;border-radius:999px;background:#fff3e1;color:#9b5a00">${subCategory}</span>
-      </div>
-      <div style="font-size:11px;color:#5c667a">OSM ID</div>
-      <div style="font-size:12px;color:#102a43;word-break:break-all">${place.osm_id}</div>
-      <div style="margin-top:8px;font-size:11px;color:#5c667a">Location</div>
-      <div style="font-size:12px;color:#102a43">${place.lat.toFixed(5)}, ${place.lng.toFixed(5)}</div>
-      ${tagsHtml}
-    </div>
-  `;
-}
-
 export function MapPane({
   places,
   initialBounds,
@@ -74,7 +53,6 @@ export function MapPane({
   const { mode } = useColorScheme();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
-  const popupRef = useRef<maplibregl.Popup | null>(null);
   const onViewportChangedRef = useRef(onViewportChanged);
   const onCenterOnReadyRef = useRef(onCenterOnReady);
   const onPlaceSelectedRef = useRef(onPlaceSelected);
@@ -82,6 +60,36 @@ export function MapPane({
   const selectedOsmIdRef = useRef(selectedOsmId);
   const enable3DRef = useRef(enable3D);
   const currentStyleUrlRef = useRef(mapStyleUrl);
+  const [cardAnchor, setCardAnchor] = useState<{ x: number; y: number } | null>(null);
+
+  const selectedPlace = useMemo(
+    () => (selectedOsmId ? places.find((place) => place.osm_id === selectedOsmId) ?? null : null),
+    [selectedOsmId, places]
+  );
+
+  const previewTags = useMemo(
+    () => (selectedPlace ? Object.entries(selectedPlace.tags || {}).slice(0, 4) : []),
+    [selectedPlace]
+  );
+
+  const updateCardAnchor = useCallback(() => {
+    const map = mapRef.current;
+    const selectedId = selectedOsmIdRef.current;
+    if (!map || !selectedId) {
+      setCardAnchor(null);
+      return;
+    }
+
+    const selected = placesRef.current.find((place) => place.osm_id === selectedId);
+    if (!selected) {
+      setCardAnchor(null);
+      return;
+    }
+
+    const point = map.project([selected.lng, selected.lat]);
+    setCardAnchor({ x: point.x, y: point.y });
+  }, []);
+
   onViewportChangedRef.current = onViewportChanged;
   onCenterOnReadyRef.current = onCenterOnReady;
   onPlaceSelectedRef.current = onPlaceSelected;
@@ -141,31 +149,6 @@ export function MapPane({
           properties: { osm_id: selectedPlace.osm_id },
         }],
       });
-    };
-
-    const syncPopup = (map: Map) => {
-      const selectedId = selectedOsmIdRef.current;
-      if (!selectedId) {
-        popupRef.current?.remove();
-        popupRef.current = null;
-        return;
-      }
-
-      const selectedPlace = placesRef.current.find((p) => p.osm_id === selectedId);
-      if (!selectedPlace) {
-        popupRef.current?.remove();
-        popupRef.current = null;
-        return;
-      }
-
-      if (!popupRef.current) {
-        popupRef.current = new maplibregl.Popup({ closeButton: true, closeOnClick: false, offset: 14 });
-      }
-
-      popupRef.current
-        .setLngLat([selectedPlace.lng, selectedPlace.lat])
-        .setHTML(buildPlacePopupHtml(selectedPlace))
-        .addTo(map);
     };
 
     const ensureCustomLayers = (map: Map) => {
@@ -247,7 +230,7 @@ export function MapPane({
       }
 
       syncPlaceData(map);
-      syncPopup(map);
+      updateCardAnchor();
       apply3DState(map);
     };
 
@@ -313,6 +296,10 @@ export function MapPane({
       });
     });
 
+    map.on("move", () => {
+      updateCardAnchor();
+    });
+
     map.on("load", () => {
       ensureCustomLayers(map);
 
@@ -332,12 +319,10 @@ export function MapPane({
     });
 
     return () => {
-      popupRef.current?.remove();
-      popupRef.current = null;
       map.remove();
       mapRef.current = null;
     };
-  }, [initialBounds.east, initialBounds.north, initialBounds.south, initialBounds.west]);
+  }, [initialBounds.east, initialBounds.north, initialBounds.south, initialBounds.west, updateCardAnchor]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -386,7 +371,9 @@ export function MapPane({
       type: "FeatureCollection",
       features: toPlaceFeatures(places),
     });
-  }, [places]);
+
+    updateCardAnchor();
+  }, [places, updateCardAnchor]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -401,12 +388,14 @@ export function MapPane({
 
     if (!selectedOsmId) {
       source.setData({ type: "FeatureCollection", features: [] });
+      setCardAnchor(null);
       return;
     }
 
     const place = places.find((p) => p.osm_id === selectedOsmId);
     if (!place) {
       source.setData({ type: "FeatureCollection", features: [] });
+      setCardAnchor(null);
       return;
     }
 
@@ -419,20 +408,14 @@ export function MapPane({
       }],
     });
 
-    if (!popupRef.current) {
-      popupRef.current = new maplibregl.Popup({ closeButton: true, closeOnClick: false, offset: 14 });
-    }
-
-    popupRef.current
-      .setLngLat([place.lng, place.lat])
-      .setHTML(buildPlacePopupHtml(place))
-      .addTo(map);
-  }, [selectedOsmId, places]);
+    updateCardAnchor();
+  }, [selectedOsmId, places, updateCardAnchor]);
 
   return (
     <Box
       ref={containerRef}
       sx={{
+        position: "relative",
         width: "100%",
         height: "100%",
         ".maplibregl-ctrl-top-right": {
@@ -469,6 +452,64 @@ export function MapPane({
           filter: mode === "dark" ? "brightness(0) invert(1)" : "none",
         },
       }}
-    />
+    >
+      {selectedPlace && cardAnchor && (
+        <Sheet
+          variant="outlined"
+          sx={{
+            position: "absolute",
+            left: cardAnchor.x,
+            top: cardAnchor.y,
+            transform: "translate(-50%, calc(-100% - 14px))",
+            zIndex: 5,
+            minWidth: 230,
+            maxWidth: 300,
+            p: 1.25,
+            boxShadow: "md",
+            borderRadius: "md",
+            pointerEvents: "auto",
+            "&::after": {
+              content: '""',
+              position: "absolute",
+              left: "50%",
+              bottom: -8,
+              width: 12,
+              height: 12,
+              transform: "translateX(-50%) rotate(45deg)",
+              backgroundColor: "background.surface",
+              borderRight: "1px solid",
+              borderBottom: "1px solid",
+              borderColor: "divider",
+            },
+          }}
+        >
+          <Stack spacing={0.75}>
+            <Typography level="title-sm">{selectedPlace.name || "Unnamed place"}</Typography>
+            <Stack direction="row" spacing={0.75}>
+              <Chip size="sm" color="primary" variant="soft">{selectedPlace.category || "Unknown"}</Chip>
+              <Chip size="sm" color="warning" variant="soft">{selectedPlace.sub_category?.trim() || "None"}</Chip>
+            </Stack>
+            <Divider />
+            <Typography level="body-xs" color="neutral">OSM ID</Typography>
+            <Typography level="body-sm" sx={{ wordBreak: "break-all" }}>{selectedPlace.osm_id}</Typography>
+            <Typography level="body-xs" color="neutral">Location</Typography>
+            <Typography level="body-sm">{selectedPlace.lat.toFixed(5)}, {selectedPlace.lng.toFixed(5)}</Typography>
+            {previewTags.length > 0 && (
+              <>
+                <Divider />
+                {previewTags.map(([key, value]) => (
+                  <Stack key={key} direction="row" justifyContent="space-between" spacing={1}>
+                    <Typography level="body-xs" color="neutral" sx={{ textTransform: "capitalize" }}>{key}</Typography>
+                    <Typography level="body-xs" sx={{ textAlign: "right", maxWidth: 170, wordBreak: "break-word" }}>
+                      {String(value)}
+                    </Typography>
+                  </Stack>
+                ))}
+              </>
+            )}
+          </Stack>
+        </Sheet>
+      )}
+    </Box>
   );
 }
