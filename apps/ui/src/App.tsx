@@ -514,7 +514,7 @@ function App() {
                       variant: "soft",
                       sx: {
                         position: "absolute",
-                        top: 20,
+                        top: 124,
                         right: 20,
                         zIndex: 2,
                         boxShadow: "sm",
@@ -544,7 +544,7 @@ function App() {
                 onClick={() => setMode(mode === "dark" ? "light" : "dark")}
                 sx={{
                   position: "absolute",
-                  top: 60,
+                  top: 164,
                   right: 20,
                   zIndex: 2,
                   boxShadow: "sm",
