@@ -81,7 +81,7 @@ export function MapPane({
   );
 
   const previewTags = useMemo(
-    () => (selectedPlace ? Object.entries(selectedPlace.tags || {}).slice(0, 4) : []),
+    () => (selectedPlace ? Object.entries(selectedPlace.tags || {}) : []),
     [selectedPlace]
   );
 
@@ -475,7 +475,7 @@ export function MapPane({
             top: cardAnchor.y,
             transform: "translate(-50%, calc(-100% - 14px))",
             zIndex: 5,
-            minWidth: 230,
+            minWidth: 250,
             maxWidth: 300,
             p: 1.25,
             boxShadow: "md",
@@ -526,30 +526,32 @@ export function MapPane({
             {previewTags.length > 0 && (
               <>
                 <Divider />
-                {previewTags.map(([key, value]) => {
-                  const valueStr = String(value);
-                  const isUrl = isValidUrl(valueStr);
-                  return (
-                    <Stack key={key} direction="row" justifyContent="space-between" spacing={1}>
-                      <Typography level="body-xs" color="neutral" sx={{ textTransform: "capitalize" }}>{key}</Typography>
-                      {isUrl ? (
-                        <Link
-                          level="body-xs"
-                          href={valueStr}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          sx={{ textAlign: "right", maxWidth: 170, wordBreak: "break-word" }}
-                        >
-                          {valueStr}
-                        </Link>
-                      ) : (
-                        <Typography level="body-xs" sx={{ textAlign: "right", maxWidth: 170, wordBreak: "break-word" }}>
-                          {valueStr}
-                        </Typography>
-                      )}
-                    </Stack>
-                  );
-                })}
+                <Box sx={{ maxHeight: 164, overflowY: "auto", display: "flex", flexDirection: "column", gap: 0.75, pr: 0.5 }}>
+                  {previewTags.map(([key, value]) => {
+                    const valueStr = String(value);
+                    const isUrl = isValidUrl(valueStr);
+                    return (
+                      <Stack key={key} direction="row" justifyContent="space-between" spacing={1}>
+                        <Typography level="body-xs" color="neutral" sx={{ textTransform: "capitalize" }}>{key}</Typography>
+                        {isUrl ? (
+                          <Link
+                            level="body-xs"
+                            href={valueStr}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            sx={{ textAlign: "right", maxWidth: 170, wordBreak: "break-word" }}
+                          >
+                            {valueStr}
+                          </Link>
+                        ) : (
+                          <Typography level="body-xs" sx={{ textAlign: "right", maxWidth: 170, wordBreak: "break-word" }}>
+                            {valueStr}
+                          </Typography>
+                        )}
+                      </Stack>
+                    );
+                  })}
+                </Box>
               </>
             )}
           </Stack>
