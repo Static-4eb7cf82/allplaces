@@ -29,7 +29,6 @@ function toPlaceFeatures(places: Place[]) {
     properties: {
       osm_id: place.osm_id,
       name: place.name || "",
-      type: place.type,
       category: place.category,
     },
   }));

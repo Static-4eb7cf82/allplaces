@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS osm_places (
   osm_id BIGINT PRIMARY KEY,
   category TEXT NOT NULL CHECK (category IN ('amenity', 'office', 'shop', 'service', 'tourism', 'leisure', 'sport', 'other')),
   name TEXT,
+  tags JSONB NOT NULL DEFAULT '{}'::jsonb,
   amenity TEXT,
   office TEXT,
   shop TEXT,

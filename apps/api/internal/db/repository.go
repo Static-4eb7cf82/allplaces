@@ -10,7 +10,6 @@ import (
 
 type Place struct {
 	OSMID    string                 `json:"osm_id"`
-	Type     string                 `json:"type"`
 	Name     *string                `json:"name,omitempty"`
 	Lat      float64                `json:"lat"`
 	Lng      float64                `json:"lng"`
@@ -67,20 +66,10 @@ func (r *Repository) QueryPlaces(ctx context.Context, filters QueryFilters) ([]P
 	query := fmt.Sprintf(`
 		SELECT
 			osm_id::text,
-			'node' AS type,
 			name,
 			ST_Y(ST_Transform(geom, 4326)) AS lat,
 			ST_X(ST_Transform(geom, 4326)) AS lng,
-			jsonb_strip_nulls(jsonb_build_object(
-				'amenity', amenity,
-				'office', office,
-				'shop', shop,
-				'service', service,
-				'tourism', tourism,
-				'leisure', leisure,
-				'sport', sport,
-				'religion', religion
-			)) AS tags,
+			tags,
 			category
 		FROM osm_places
 		WHERE %s
@@ -99,7 +88,6 @@ func (r *Repository) QueryPlaces(ctx context.Context, filters QueryFilters) ([]P
 		place.Tags = map[string]interface{}{}
 		if err := rows.Scan(
 			&place.OSMID,
-			&place.Type,
 			&place.Name,
 			&place.Lat,
 			&place.Lng,

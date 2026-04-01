@@ -24,6 +24,7 @@ SELECT
     ELSE 'other'
   END AS category,
   name,
+  COALESCE(hstore_to_jsonb(tags), '{}'::jsonb) AS tags,
   amenity,
   office,
   shop,

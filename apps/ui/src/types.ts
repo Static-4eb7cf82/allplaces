@@ -7,7 +7,6 @@ export type ViewportBounds = {
 
 export type Place = {
   osm_id: string;
-  type: string;
   name?: string;
   lat: number;
   lng: number;
