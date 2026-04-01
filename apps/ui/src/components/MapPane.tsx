@@ -497,7 +497,7 @@ export function MapPane({
           }}
         >
           <Stack spacing={0.75}>
-            <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={0.5}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={0.5}>
               <Typography level="title-sm">{selectedPlace.name || "Unnamed place"}</Typography>
               <Tooltip title="View in Google Maps" placement="left" variant="soft">
                 <IconButton
@@ -508,7 +508,7 @@ export function MapPane({
                   href={`https://www.google.com/maps/search/${encodeURIComponent(selectedPlace.name || "Unnamed place")}/@${selectedPlace.lat},${selectedPlace.lng},20z`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  sx={{ flexShrink: 0, mt: "-2px" }}
+                  sx={{ flexShrink: 0 }}
                 >
                   <NearMeRounded sx={{ fontSize: 16 }} />
                 </IconButton>
@@ -518,7 +518,9 @@ export function MapPane({
               <Chip size="sm" color="primary" variant="soft">{selectedPlace.category || "Unknown"}</Chip>
               <Chip size="sm" color="warning" variant="soft">{selectedPlace.sub_category?.trim() || "None"}</Chip>
             </Stack>
-            <Divider />
+            <Box sx={{ pt: 0.5 }}>
+              <Divider />
+            </Box>
             <Typography level="body-xs" color="neutral">Location</Typography>
             <Typography level="body-xs">{selectedPlace.lat.toFixed(5)}, {selectedPlace.lng.toFixed(5)}</Typography>
             {previewTags.length > 0 && (
