@@ -2,11 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Box from "@mui/joy/Box";
 import Chip from "@mui/joy/Chip";
 import Divider from "@mui/joy/Divider";
+import IconButton from "@mui/joy/IconButton";
 import Link from "@mui/joy/Link";
 import Sheet from "@mui/joy/Sheet";
 import Stack from "@mui/joy/Stack";
+import Tooltip from "@mui/joy/Tooltip";
 import Typography from "@mui/joy/Typography";
 import { useColorScheme } from "@mui/joy/styles";
+import NearMeRounded from "@mui/icons-material/NearMeRounded";
 import maplibregl, { GeoJSONSource, Map } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -494,7 +497,23 @@ export function MapPane({
           }}
         >
           <Stack spacing={0.75}>
-            <Typography level="title-sm">{selectedPlace.name || "Unnamed place"}</Typography>
+            <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={0.5}>
+              <Typography level="title-sm">{selectedPlace.name || "Unnamed place"}</Typography>
+              <Tooltip title="View in Google Maps" placement="left" variant="soft">
+                <IconButton
+                  size="sm"
+                  variant="plain"
+                  color="neutral"
+                  component="a"
+                  href={`https://www.google.com/maps/search/${encodeURIComponent(selectedPlace.name || "Unnamed place")}/@${selectedPlace.lat},${selectedPlace.lng},20z`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{ flexShrink: 0, mt: "-2px" }}
+                >
+                  <NearMeRounded sx={{ fontSize: 16 }} />
+                </IconButton>
+              </Tooltip>
+            </Stack>
             <Stack direction="row" spacing={0.75}>
               <Chip size="sm" color="primary" variant="soft">{selectedPlace.category || "Unknown"}</Chip>
               <Chip size="sm" color="warning" variant="soft">{selectedPlace.sub_category?.trim() || "None"}</Chip>
