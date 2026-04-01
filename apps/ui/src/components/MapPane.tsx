@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Box from "@mui/joy/Box";
 import Chip from "@mui/joy/Chip";
 import Divider from "@mui/joy/Divider";
+import Link from "@mui/joy/Link";
 import Sheet from "@mui/joy/Sheet";
 import Stack from "@mui/joy/Stack";
 import Typography from "@mui/joy/Typography";
@@ -24,6 +25,15 @@ type Props = {
 
 const SOURCE_ID = "places-source";
 const SELECTED_SOURCE_ID = "selected-source";
+
+function isValidUrl(value: string): boolean {
+  try {
+    new URL(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function toPlaceFeatures(places: Place[]) {
   return places.map((place) => ({
@@ -490,21 +500,35 @@ export function MapPane({
               <Chip size="sm" color="warning" variant="soft">{selectedPlace.sub_category?.trim() || "None"}</Chip>
             </Stack>
             <Divider />
-            <Typography level="body-xs" color="neutral">OSM ID</Typography>
-            <Typography level="body-sm" sx={{ wordBreak: "break-all" }}>{selectedPlace.osm_id}</Typography>
             <Typography level="body-xs" color="neutral">Location</Typography>
-            <Typography level="body-sm">{selectedPlace.lat.toFixed(5)}, {selectedPlace.lng.toFixed(5)}</Typography>
+            <Typography level="body-xs">{selectedPlace.lat.toFixed(5)}, {selectedPlace.lng.toFixed(5)}</Typography>
             {previewTags.length > 0 && (
               <>
                 <Divider />
-                {previewTags.map(([key, value]) => (
-                  <Stack key={key} direction="row" justifyContent="space-between" spacing={1}>
-                    <Typography level="body-xs" color="neutral" sx={{ textTransform: "capitalize" }}>{key}</Typography>
-                    <Typography level="body-xs" sx={{ textAlign: "right", maxWidth: 170, wordBreak: "break-word" }}>
-                      {String(value)}
-                    </Typography>
-                  </Stack>
-                ))}
+                {previewTags.map(([key, value]) => {
+                  const valueStr = String(value);
+                  const isUrl = isValidUrl(valueStr);
+                  return (
+                    <Stack key={key} direction="row" justifyContent="space-between" spacing={1}>
+                      <Typography level="body-xs" color="neutral" sx={{ textTransform: "capitalize" }}>{key}</Typography>
+                      {isUrl ? (
+                        <Link
+                          level="body-xs"
+                          href={valueStr}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          sx={{ textAlign: "right", maxWidth: 170, wordBreak: "break-word" }}
+                        >
+                          {valueStr}
+                        </Link>
+                      ) : (
+                        <Typography level="body-xs" sx={{ textAlign: "right", maxWidth: 170, wordBreak: "break-word" }}>
+                          {valueStr}
+                        </Typography>
+                      )}
+                    </Stack>
+                  );
+                })}
               </>
             )}
           </Stack>
