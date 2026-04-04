@@ -183,18 +183,7 @@ function App() {
   }, [places, columnFilters.category, getSubCategoryValue]);
 
   const fuzzyMatch = useCallback((text: string, query: string): boolean => {
-    const textLower = text.toLowerCase();
-    const queryLower = query.toLowerCase();
-    let textIdx = 0;
-    for (let i = 0; i < queryLower.length; i++) {
-      const char = queryLower[i];
-      textIdx = textLower.indexOf(char, textIdx);
-      if (textIdx === -1) {
-        return false;
-      }
-      textIdx++;
-    }
-    return true;
+    return text.toLowerCase().includes(query.toLowerCase());
   }, []);
 
   const getPlaceMetadataFields = useCallback((place: Place): string[] => {

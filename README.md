@@ -95,7 +95,7 @@ Download osm extract files from https://download.geofabrik.de/index.html
 
 ## Fuzzy search
 
-The fuzzy search input in the UI searches each place's full metadata as flexible character-order matches.
+The fuzzy search input in the UI searches each place's full metadata as substring matches.
 
 How it works:
 
@@ -104,13 +104,13 @@ How it works:
 	- place name
 	- place category
 	- every projected OSM attribute in `tags` (strings directly, numbers/booleans as text, objects as JSON)
-3. A term matches a field when all characters in the term appear in order in that field (case-insensitive), not necessarily adjacent.
+3. A term matches a field when it appears as a consecutive substring of that field (case-insensitive).
 4. Multi-word queries are OR-ed: a place is included if **any** term matches **any** field.
 5. Fuzzy search is combined with all other filters (has-name, name, category, sub-category).
 
 Examples:
 
-- Query `prk` matches field `park` (`p -> r -> k` in order).
+- Query `par` matches field `park` (consecutive substring).
 - Query `food park` returns places matching `food` OR `park`.
 - Query `food` does not match `park`.
-- Query `abc` matches `aXbYYc`, but does not match `acb`.
+- Query `prk` does not match `park` (letters not consecutive).
