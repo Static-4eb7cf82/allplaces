@@ -183,18 +183,7 @@ function App() {
   }, [places, columnFilters.category, getSubCategoryValue]);
 
   const fuzzyMatch = useCallback((text: string, query: string): boolean => {
-    const textLower = text.toLowerCase();
-    const queryLower = query.toLowerCase();
-    let textIdx = 0;
-    for (let i = 0; i < queryLower.length; i++) {
-      const char = queryLower[i];
-      textIdx = textLower.indexOf(char, textIdx);
-      if (textIdx === -1) {
-        return false;
-      }
-      textIdx++;
-    }
-    return true;
+    return text.toLowerCase().includes(query.toLowerCase());
   }, []);
 
   const getPlaceMetadataFields = useCallback((place: Place): string[] => {
@@ -443,7 +432,7 @@ function App() {
                       onMouseEnter={() => setHoveredOsmId(place.osm_id)}
                       onMouseLeave={() => setHoveredOsmId((current) => (current === place.osm_id ? null : current))}
                       onClick={() => {
-                        setSelectedOsmId(place.osm_id);
+                        setSelectedOsmId((current) => (current === place.osm_id ? null : place.osm_id));
                         centerOnRef.current?.(place.lat, place.lng);
                       }}
                       style={{
@@ -560,6 +549,7 @@ function App() {
               selectedOsmId={selectedOsmId}
               mapStyleUrl={BASE_MAP_STYLES[baseMapOption].styleUrl}
               enable3D={BASE_MAP_STYLES[baseMapOption].enable3D}
+              onPlaceSelected={(osmId) => setSelectedOsmId((current) => (current === osmId ? null : osmId))}
               onViewportChanged={handleViewportChanged}
               onCenterOnReady={(fn) => { centerOnRef.current = fn; }}
             />

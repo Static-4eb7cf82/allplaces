@@ -1,6 +1,15 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Box from "@mui/joy/Box";
+import Chip from "@mui/joy/Chip";
+import Divider from "@mui/joy/Divider";
+import IconButton from "@mui/joy/IconButton";
+import Link from "@mui/joy/Link";
+import Sheet from "@mui/joy/Sheet";
+import Stack from "@mui/joy/Stack";
+import Tooltip from "@mui/joy/Tooltip";
+import Typography from "@mui/joy/Typography";
 import { useColorScheme } from "@mui/joy/styles";
+import NearMeRounded from "@mui/icons-material/NearMeRounded";
 import maplibregl, { GeoJSONSource, Map } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -12,12 +21,22 @@ type Props = {
   selectedOsmId: string | null;
   mapStyleUrl: string;
   enable3D: boolean;
+  onPlaceSelected: (osmId: string) => void;
   onViewportChanged: (bounds: ViewportBounds) => void;
   onCenterOnReady: (fn: (lat: number, lng: number) => void) => void;
 };
 
 const SOURCE_ID = "places-source";
 const SELECTED_SOURCE_ID = "selected-source";
+
+function isValidUrl(value: string): boolean {
+  try {
+    new URL(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function toPlaceFeatures(places: Place[]) {
   return places.map((place) => ({
@@ -40,6 +59,7 @@ export function MapPane({
   selectedOsmId,
   mapStyleUrl,
   enable3D,
+  onPlaceSelected,
   onViewportChanged,
   onCenterOnReady,
 }: Props) {
@@ -48,12 +68,44 @@ export function MapPane({
   const mapRef = useRef<Map | null>(null);
   const onViewportChangedRef = useRef(onViewportChanged);
   const onCenterOnReadyRef = useRef(onCenterOnReady);
+  const onPlaceSelectedRef = useRef(onPlaceSelected);
   const placesRef = useRef(places);
   const selectedOsmIdRef = useRef(selectedOsmId);
   const enable3DRef = useRef(enable3D);
   const currentStyleUrlRef = useRef(mapStyleUrl);
+  const [cardAnchor, setCardAnchor] = useState<{ x: number; y: number } | null>(null);
+
+  const selectedPlace = useMemo(
+    () => (selectedOsmId ? places.find((place) => place.osm_id === selectedOsmId) ?? null : null),
+    [selectedOsmId, places]
+  );
+
+  const previewTags = useMemo(
+    () => (selectedPlace ? Object.entries(selectedPlace.tags || {}) : []),
+    [selectedPlace]
+  );
+
+  const updateCardAnchor = useCallback(() => {
+    const map = mapRef.current;
+    const selectedId = selectedOsmIdRef.current;
+    if (!map || !selectedId) {
+      setCardAnchor(null);
+      return;
+    }
+
+    const selected = placesRef.current.find((place) => place.osm_id === selectedId);
+    if (!selected) {
+      setCardAnchor(null);
+      return;
+    }
+
+    const point = map.project([selected.lng, selected.lat]);
+    setCardAnchor({ x: point.x, y: point.y });
+  }, []);
+
   onViewportChangedRef.current = onViewportChanged;
   onCenterOnReadyRef.current = onCenterOnReady;
+  onPlaceSelectedRef.current = onPlaceSelected;
   placesRef.current = places;
   selectedOsmIdRef.current = selectedOsmId;
   enable3DRef.current = enable3D;
@@ -191,6 +243,7 @@ export function MapPane({
       }
 
       syncPlaceData(map);
+      updateCardAnchor();
       apply3DState(map);
     };
 
@@ -208,21 +261,42 @@ export function MapPane({
     });
 
     map.on("click", (event) => {
-      const features = map.queryRenderedFeatures(event.point, { layers: ["clusters"] });
-      const clusterId = features[0]?.properties?.cluster_id;
-      const source = map.getSource(SOURCE_ID) as GeoJSONSource | undefined;
-      if (!source || clusterId === undefined) {
+      const interactiveFeatures = map.queryRenderedFeatures(event.point, {
+        layers: ["clusters", "unclustered-point", "selected-point"],
+      });
+      const feature = interactiveFeatures[0];
+      if (!feature) {
         return;
       }
-      source
-        .getClusterExpansionZoom(Number(clusterId))
-        .then((zoom) => {
-          const [lng, lat] = features[0].geometry.type === "Point" ? features[0].geometry.coordinates : [0, 0];
-          map.easeTo({ center: [lng, lat], zoom });
-        })
-        .catch(() => {
-          // Ignore transient cluster expansion failures.
-        });
+
+      const isCluster = feature.properties?.point_count !== undefined;
+      if (isCluster) {
+        const clusterId = feature.properties?.cluster_id;
+        const source = map.getSource(SOURCE_ID) as GeoJSONSource | undefined;
+        if (!source || clusterId === undefined) {
+          return;
+        }
+        source
+          .getClusterExpansionZoom(Number(clusterId))
+          .then((zoom) => {
+            const [lng, lat] = feature.geometry.type === "Point" ? feature.geometry.coordinates : [0, 0];
+            map.easeTo({ center: [lng, lat], zoom });
+          })
+          .catch(() => {
+            // Ignore transient cluster expansion failures.
+          });
+        return;
+      }
+
+      const osmId = feature.properties?.osm_id;
+      if (typeof osmId === "string") {
+        onPlaceSelectedRef.current(osmId);
+      }
+    });
+
+    map.on("mousemove", (event) => {
+      const features = map.queryRenderedFeatures(event.point, { layers: ["unclustered-point", "selected-point"] });
+      map.getCanvas().style.cursor = features.length > 0 ? "pointer" : "";
     });
 
     map.on("moveend", () => {
@@ -233,6 +307,10 @@ export function MapPane({
         north: bounds.getNorth(),
         east: bounds.getEast(),
       });
+    });
+
+    map.on("move", () => {
+      updateCardAnchor();
     });
 
     map.on("load", () => {
@@ -257,7 +335,7 @@ export function MapPane({
       map.remove();
       mapRef.current = null;
     };
-  }, [initialBounds.east, initialBounds.north, initialBounds.south, initialBounds.west]);
+  }, [initialBounds.east, initialBounds.north, initialBounds.south, initialBounds.west, updateCardAnchor]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -306,7 +384,9 @@ export function MapPane({
       type: "FeatureCollection",
       features: toPlaceFeatures(places),
     });
-  }, [places]);
+
+    updateCardAnchor();
+  }, [places, updateCardAnchor]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -321,12 +401,14 @@ export function MapPane({
 
     if (!selectedOsmId) {
       source.setData({ type: "FeatureCollection", features: [] });
+      setCardAnchor(null);
       return;
     }
 
     const place = places.find((p) => p.osm_id === selectedOsmId);
     if (!place) {
       source.setData({ type: "FeatureCollection", features: [] });
+      setCardAnchor(null);
       return;
     }
 
@@ -338,12 +420,15 @@ export function MapPane({
         properties: { osm_id: place.osm_id },
       }],
     });
-  }, [selectedOsmId, places]);
+
+    updateCardAnchor();
+  }, [selectedOsmId, places, updateCardAnchor]);
 
   return (
     <Box
       ref={containerRef}
       sx={{
+        position: "relative",
         width: "100%",
         height: "100%",
         ".maplibregl-ctrl-top-right": {
@@ -380,6 +465,98 @@ export function MapPane({
           filter: mode === "dark" ? "brightness(0) invert(1)" : "none",
         },
       }}
-    />
+    >
+      {selectedPlace && cardAnchor && (
+        <Sheet
+          variant="outlined"
+          sx={{
+            position: "absolute",
+            left: cardAnchor.x,
+            top: cardAnchor.y,
+            transform: "translate(-50%, calc(-100% - 14px))",
+            zIndex: 5,
+            minWidth: 250,
+            maxWidth: 300,
+            p: 1.25,
+            boxShadow: "md",
+            borderRadius: "md",
+            pointerEvents: "auto",
+            "&::after": {
+              content: '""',
+              position: "absolute",
+              left: "50%",
+              bottom: -8,
+              width: 14,
+              height: 14,
+              transform: "translateX(-50%) rotate(45deg)",
+              backgroundColor: "background.surface",
+              borderRight: "1px solid",
+              borderBottom: "1px solid",
+              borderColor: "divider",
+            },
+          }}
+        >
+          <Stack spacing={0.75}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={0.5}>
+              <Typography level="title-sm">{selectedPlace.name || "Unnamed place"}</Typography>
+              <Tooltip title="View in Google Maps" placement="left" variant="soft">
+                <IconButton
+                  size="sm"
+                  variant="plain"
+                  color="neutral"
+                  component="a"
+                  href={`https://www.google.com/maps/search/${encodeURIComponent(selectedPlace.name || "Unnamed place")}/@${selectedPlace.lat},${selectedPlace.lng},20z`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{ flexShrink: 0 }}
+                >
+                  <NearMeRounded sx={{ fontSize: 16 }} />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+            <Stack direction="row" spacing={0.75}>
+              <Chip size="sm" color="primary" variant="soft">{selectedPlace.category || "Unknown"}</Chip>
+              <Chip size="sm" color="warning" variant="soft">{selectedPlace.sub_category?.trim() || "None"}</Chip>
+            </Stack>
+            <Box sx={{ pt: 0.5 }}>
+              <Divider />
+            </Box>
+            <Typography level="body-xs" color="neutral">Location</Typography>
+            <Typography level="body-xs">{selectedPlace.lat.toFixed(5)}, {selectedPlace.lng.toFixed(5)}</Typography>
+            {previewTags.length > 0 && (
+              <>
+                <Divider />
+                <Box sx={{ maxHeight: 164, overflowY: "auto", display: "flex", flexDirection: "column", gap: 0.75, pr: 0.5 }}>
+                  {previewTags.map(([key, value]) => {
+                    const valueStr = String(value);
+                    const isUrl = isValidUrl(valueStr);
+                    return (
+                      <Stack key={key} direction="row" justifyContent="space-between" spacing={1}>
+                        <Typography level="body-xs" color="neutral" sx={{ textTransform: "capitalize" }}>{key}</Typography>
+                        {isUrl ? (
+                          <Link
+                            level="body-xs"
+                            href={valueStr}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            sx={{ textAlign: "right", maxWidth: 170, wordBreak: "break-word" }}
+                          >
+                            {valueStr}
+                          </Link>
+                        ) : (
+                          <Typography level="body-xs" sx={{ textAlign: "right", maxWidth: 170, wordBreak: "break-word" }}>
+                            {valueStr}
+                          </Typography>
+                        )}
+                      </Stack>
+                    );
+                  })}
+                </Box>
+              </>
+            )}
+          </Stack>
+        </Sheet>
+      )}
+    </Box>
   );
 }
